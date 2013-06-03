@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<meta charset=utf-8>
+<title></title>
+
+<div id="entry"></div>
+
+<script src="../index.js"></script>
+<script>
+var html =
+  '<div class="post">' +
+    '<h1>By Alan Johnson</h1>' +
+    '<div class="body">I Love Handlebars</div>' +
+    '\n' +
+    '<h1>Comments</h1>' +
+    '\n' +
+    '<h2>By Yehuda Katz</h2>' +
+    '<div class="body">Me Too!</div>' +
+  '</div>'
+
+var template = new Template([
+  new Element('div', {
+    'class': new Attribute('post')
+  }, [
+    new Element('h1', null, [
+      new Text('By ')
+    , new TextExpression('author')
+    ])
+  , new Element('div', {
+      'class': new Attribute('body')
+    }, [
+      new TextExpression('body')
+    ])
+  , new Text('\n')
+  , new Element('h1', null, [
+      new Text('Comments')
+    ])
+  , new Text('\n')
+  , new Block('comments', [
+      new Element('h2', null, [
+        new Text('By ')
+      , new TextExpression('author')
+      ])
+    , new Element('div', {
+        'class': new Attribute('body')
+      }, [
+        new TextExpression('body')
+      ])
+    ])
+  ])
+]);
+
+var bindings = [];
+var saddle = new Saddle({
+  onAdd: function(binding) {
+    console.log('add', binding)
+    bindings.push(binding)
+  }
+, onRemove: function(binding) {
+    console.log('remove', binding);
+  }
+, onUpdate: function(binding) {
+    console.log('update', binding);
+  }
+});
+
+var context = new Context(saddle, {
+  author: 'Alan Johnson'
+, body: 'I Love Handlebars'
+, comments: {
+    author: 'Yehuda Katz'
+  , body: 'Me too!'
+  }
+});
+
+var el = document.getElementById('entry');
+
+var fragment = template.getFragment(context);
+
+el.innerHTML = template.getHtml(context);
+replaceBindings(fragment, el);
+
+// var j = 50;
+// run();
+
+function run() {
+  var i = 10000;
+  var start = +new Date;
+  var sum = 0;
+  while (--i) {
+    while (el.firstChild) el.removeChild(el.firstChild)
+    el.appendChild(template.getFragment(data));
+    // el.innerHTML = template.getHtml(data);
+  }
+  console.log(new Date - start);
+  if (--j) setTimeout(run, 50);
+}
+
+</script>
