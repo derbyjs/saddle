@@ -49,21 +49,40 @@ var template = new Template([
   ])
 ]);
 
-var bindings = [];
-var saddle = new Saddle({
-  onAdd: function(binding) {
-    var len = bindings.push(binding)
-    console.log('add', binding, len - 1)
-  }
-, onRemove: function(binding) {
-    console.log('remove', binding);
-  }
-, onUpdate: function(binding) {
-    console.log('update', binding);
-  }
-});
+function ContextEvents(add, remove, update) {
+  this.add = add;
+  this.remove = remove;
+  this.update = update;
+}
+function Context(events, data, parent) {
+  this.events = events;
+  this.data = data;
+  this.parent = parent;
+}
+Context.prototype.get = function(name) {
+  if (name == null || name === 'this') return this.data;
+  var value = this.data && this.data[name];
+  return value || this.parent && this.parent.get(name);
+};
+Context.prototype.child = function(name) {
+  var data = this.get(name);
+  return new Context(this.events, data, this);
+};
 
-var data = {
+var bindings = [];
+function addBinding(binding) {
+  var len = bindings.push(binding);
+  console.log('add', binding, len - 1);
+}
+function removeBinding(binding) {
+  console.log('remove', binding);
+}
+function updateBinding(binding) {
+  console.log('update', binding);
+}
+var events = new ContextEvents(addBinding, removeBinding, updateBinding);
+
+var context = new Context(events, {
   author: 'Alan Johnson'
 , body: 'I Love Handlebars'
 , comments: [{
@@ -73,12 +92,12 @@ var data = {
     author: 'Yehuda Katz'
   , body: 'Me too!'
   }]
-};
+});
 
 var el = document.getElementById('entry');
-el.innerHTML = saddle.getHtml(template, data);
+el.innerHTML = template.getHtml(context);
 
-var fragment = saddle.getFragment(template, data);
+var fragment = template.getFragment(context);
 replaceBindings(fragment, el);
 
 // var j = 50;
@@ -90,8 +109,8 @@ function run() {
   var sum = 0;
   while (--i) {
     while (el.firstChild) el.removeChild(el.firstChild)
-    el.appendChild(template.getFragment(data));
-    // el.innerHTML = template.getHtml(data);
+    el.appendChild(template.getFragment(context));
+    // el.innerHTML = template.getHtml(context);
   }
   console.log(new Date - start);
   if (--j) setTimeout(run, 50);
