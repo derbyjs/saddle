@@ -35,7 +35,7 @@ var template = new Template([
       new Text('Comments')
     ])
   , new Text('\n')
-  , new Block('comments', [
+  , new EachBlock('comments', [
       new Element('h2', null, [
         new Text('By ')
       , new TextExpression('author')
@@ -52,8 +52,8 @@ var template = new Template([
 var bindings = [];
 var saddle = new Saddle({
   onAdd: function(binding) {
-    console.log('add', binding)
-    bindings.push(binding)
+    var len = bindings.push(binding)
+    console.log('add', binding, len - 1)
   }
 , onRemove: function(binding) {
     console.log('remove', binding);
@@ -63,20 +63,22 @@ var saddle = new Saddle({
   }
 });
 
-var context = new Context(saddle, {
+var data = {
   author: 'Alan Johnson'
 , body: 'I Love Handlebars'
-, comments: {
+, comments: [{
     author: 'Yehuda Katz'
   , body: 'Me too!'
-  }
-});
+  }, {
+    author: 'Yehuda Katz'
+  , body: 'Me too!'
+  }]
+};
 
 var el = document.getElementById('entry');
+el.innerHTML = saddle.getHtml(template, data);
 
-var fragment = template.getFragment(context);
-
-el.innerHTML = template.getHtml(context);
+var fragment = saddle.getFragment(template, data);
 replaceBindings(fragment, el);
 
 // var j = 50;

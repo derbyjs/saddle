@@ -29,7 +29,7 @@ TextExpression.prototype.appendTo = function(parent, context) {
   var data = context.get(this.source);
   var node = document.createTextNode(data);
   parent.appendChild(node);
-  context.saddle.add(new NodeBinding(this, node));
+  context.saddle.emitAdd(new NodeBinding(this, node));
 };
 TextExpression.prototype.update = function(context, binding) {
   binding.node.data = context.get(this.source);
@@ -59,7 +59,7 @@ CommentExpression.prototype.appendTo = function(parent, context) {
   var data = context.get(this.source);
   var node = document.createComment(data);
   parent.appendChild(node);
-  context.saddle.add(new NodeBinding(this, node));
+  context.saddle.emitAdd(new NodeBinding(this, node));
 };
 CommentExpression.prototype.update = function(context, binding) {
   binding.node.data = context.get(this.source);
@@ -80,7 +80,7 @@ AttributeExpression.prototype.getHtml = function(context) {
   return context.get(this.source);
 };
 AttributeExpression.prototype.get = function(context, element, name) {
-  context.saddle.add(new AttributeBinding(this, element, name));
+  context.saddle.emitAdd(new AttributeBinding(this, element, name));
   return context.get(this.source);
 };
 AttributeExpression.prototype.update = function(context, binding) {
@@ -131,28 +131,27 @@ Element.prototype.appendTo = function(parent, context) {
 
 function Block(source, contents) {
   this.source = source;
+  this.ending = 'end ' + source;
   this.contents = contents;
 }
 Block.prototype = new Item();
 Block.prototype.getHtml = function(context) {
   var blockContext = childContext(context, this.source);
-  return contentsHtml(this.contents, blockContext);
+  return '<!--' + this.source + '-->' +
+    contentsHtml(this.contents, blockContext) +
+    '<!--' + this.ending + '-->';
 };
 Block.prototype.appendTo = function(parent, context, binding) {
   var blockContext = childContext(context, this.source);
-  // TODO: DRY?
-  var before = parent.lastChild;
+  var start = document.createComment(this.source);
+  var end = document.createComment(this.ending);
+  parent.appendChild(start);
   appendContents(parent, this.contents, blockContext);
-  var start = (before && before.nextSibling) || parent.firstChild;
-  var end = parent.lastChild;
-  if (binding) {
-    binding.start = start;
-    binding.end = end;
-  } else {
-    context.saddle.add(new RangeBinding(this, start, end));
-  }
+  parent.appendChild(end);
+  updateRange(context, binding, this, start, end);
 };
 Block.prototype.update = function(context, binding) {
+  // Get start and end in advance, since binding is mutated in getFragment
   var start = binding.start;
   var end = binding.end;
   var fragment = this.getFragment(context, binding);
@@ -161,34 +160,68 @@ Block.prototype.update = function(context, binding) {
 
 function EachBlock(source, contents) {
   this.source = source;
+  this.ending = 'end ' + source;
   this.contents = contents;
 }
 EachBlock.prototype = new Item();
 EachBlock.prototype.getHtml = function(context) {
   var listContext = childContext(context, this.source);
   var items = listContext.get();
-  var html = '';
+  var html = '<!--' + this.source + '-->';
   for (var i = 0, len = items.length; i < len; i++) {
     var itemContext = childContext(listContext, i);
-    html += contentsHtml(this.contents, itemContext);
+    html += contentsHtml(this.contents, itemContext) || '<!--empty-->';
   }
-  return html;
+  return html + '<!--' + this.ending + '-->';
 };
-EachBlock.prototype.appendTo = function(parent, context) {
+EachBlock.prototype.appendItemTo = function(parent, context, index, binding) {
+  var before = parent.lastChild;
+  var start, end;
+  appendContents(parent, this.contents, context);
+  if (before === parent.lastChild) {
+    start = end = document.createComment('empty');
+    parent.appendChild(start);
+  } else {
+    start = (before && before.nextSibling) || parent.firstChild;
+    end = parent.lastChild;
+  }
+  updateRange(context, binding, this, start, end, index);
+};
+EachBlock.prototype.appendTo = function(parent, context, binding) {
   var listContext = childContext(context, this.source);
   var items = listContext.get();
+  var start = document.createComment(this.source);
+  var end = document.createComment(this.ending);
+  parent.appendChild(start);
   for (var i = 0, len = items.length; i < len; i++) {
     var itemContext = childContext(listContext, i);
-    var before = parent.lastChild;
-    appendContents(parent, this.contents, itemContext);
-    var start = (before && before.nextSibling) || parent.firstChild;
-    var end = parent.lastChild;
-    context.saddle.add(new RangeBinding(this, start, end));
+    this.appendItemTo(parent, itemContext, i);
   }
+  parent.appendChild(end);
+  updateRange(context, binding, this, start, end);
 };
 EachBlock.prototype.update = function(context, binding) {
-  // TODO
+  var start = binding.start;
+  var end = binding.end;
+  if (binding.index == null) {
+    var fragment = this.getFragment(context, binding);
+  } else {
+    var fragment = document.createDocumentFragment();
+    this.appendItemTo(fragment, context, binding.index, binding);
+  }
+  replaceRange(start, end, fragment);
 };
+
+function updateRange(context, binding, template, start, end, index) {
+  if (binding) {
+    binding.start = start;
+    binding.end = end;
+    start.$saddleStart = binding;
+    end.$saddleEnd = binding;
+  } else {
+    context.saddle.emitAdd(new RangeBinding(template, start, end, index));
+  }
+}
 
 function Template(contents) {
   this.contents = contents;
@@ -242,23 +275,32 @@ function Saddle(options) {
   this.onRemove = (options && options.onRemove) || noop;
   this.onUpdate = (options && options.onUpdate) || noop;
 }
-Saddle.prototype.add = function(binding) {
+Saddle.prototype.emitAdd = function(binding) {
   this.onAdd(binding);
 };
-Saddle.prototype.remove = function(binding) {
+Saddle.prototype.emitRemove = function(binding) {
   this.onRemove(binding);
 };
-Saddle.prototype.update = function(binding) {
+Saddle.prototype.emitUpdate = function(binding) {
   this.onUpdate(binding);
 };
-Saddle.prototype.context = function(data) {
+Saddle.prototype.createContext = function(data) {
   return new Context(this, data);
+};
+Saddle.prototype.update = function(binding, data) {
+  binding.update(this.createContext(data));
+};
+Saddle.prototype.getHtml = function(item, data) {
+  return item.getHtml(this.createContext(data));
+};
+Saddle.prototype.getFragment = function(item, data) {
+  return item.getFragment(this.createContext(data));
 };
 
 function Binding() {}
 Binding.prototype.update = function(context) {
   this.template.update(context, this);
-  context.saddle.update(this);
+  context.saddle.emitUpdate(this);
 };
 
 function NodeBinding(template, node) {
@@ -280,12 +322,13 @@ function AttributeBinding(template, element, name) {
 }
 AttributeBinding.prototype = new Binding();
 
-function RangeBinding(template, start, end) {
+function RangeBinding(template, start, end, index) {
   this.template = template;
   this.start = start;
   this.end = end;
-  start.$saddleRangeStart = this;
-  end.$saddleRangeEnd = this;
+  this.index = index;
+  start.$saddleStart = this;
+  end.$saddleEnd = this;
 }
 RangeBinding.prototype = new Binding();
 
@@ -335,22 +378,21 @@ function replaceNodeBindings(node, mirrorNode) {
     binding.node = mirrorNode;
     mirrorNode.$saddleNode = binding;
   }
-  binding = node.$saddleRangeStart;
+  binding = node.$saddleStart;
   if (binding) {
     binding.start = mirrorNode;
-    mirrorNode.$saddleRangeStart = binding;
+    mirrorNode.$saddleStart = binding;
   }
-  binding = node.$saddleRangeEnd;
+  binding = node.$saddleEnd;
   if (binding) {
     binding.end = mirrorNode;
-    mirrorNode.$saddleRangeEnd = binding;
+    mirrorNode.$saddleEnd = binding;
   }
-  var attributeBindingsMap = node.$saddleAttributes;
-  if (binding) {
-    for (var key in attributeBindingsMap) {
-      binding = attributeBindingsMap[key];
-      binding.element = mirrorNode;
+  var attributes = node.$saddleAttributes;
+  if (attributes) {
+    for (var key in attributes) {
+      attributes[key].element = mirrorNode;
     }
-    mirrorNode.$saddleAttributes = attributeBindingsMap;
+    mirrorNode.$saddleAttributes = attributes;
   }
 }
