@@ -69,12 +69,15 @@ Context.prototype.child = function(name) {
   return new Context(this.events, data, this);
 };
 
-var bindings = [];
+var bindings = {};
+var count = 0;
 function addBinding(binding) {
-  var len = bindings.push(binding);
-  console.log('add', binding, len - 1);
+  var id = binding.id = ++count;
+  bindings[id] = binding;
+  console.log('add', binding, id);
 }
 function removeBinding(binding) {
+  delete bindings[binding.id];
   console.log('remove', binding);
 }
 function updateBinding(binding) {

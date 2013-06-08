@@ -152,7 +152,7 @@ Block.prototype.update = function(context, binding) {
   var start = binding.start;
   var end = binding.end;
   var fragment = this.getFragment(context, binding);
-  replaceRange(start, end, fragment);
+  replaceRange(context, start, end, fragment, binding);
 };
 
 function EachBlock(source, contents) {
@@ -206,7 +206,7 @@ EachBlock.prototype.update = function(context, binding) {
     var fragment = document.createDocumentFragment();
     this.appendItemTo(fragment, context, binding.index, binding);
   }
-  replaceRange(start, end, fragment);
+  replaceRange(context, start, end, fragment, binding);
 };
 
 function updateRange(context, binding, template, start, end, index) {
@@ -245,10 +245,11 @@ function contentsHtml(contents, context) {
   }
   return html;
 }
-function replaceRange(start, end, fragment) {
+function replaceRange(context, start, end, fragment, binding) {
   var parent = start.parentNode;
   if (start === end) {
     parent.replaceChild(fragment, start);
+    emitRemoved(context.events, start, binding);
     return;
   }
   // Remove all nodes from start to end, inclusive
@@ -257,11 +258,27 @@ function replaceRange(start, end, fragment) {
   while (node) {
     nextNode = node.nextSibling;
     parent.removeChild(node);
+    emitRemoved(context.events, node, binding);
     if (node === end) break;
     node = nextNode;
   }
   // This also works if nextNode is null, by doing an append
   parent.insertBefore(fragment, nextNode);
+}
+function emitRemoved(events, node, ignore) {
+  var binding = node.$bindNode;
+  if (binding && binding !== ignore) events.remove(binding);
+  binding = node.$bindStart;
+  if (binding && binding !== ignore) events.remove(binding);
+  var attributes = node.$bindAttributes;
+  if (attributes) {
+    for (var key in attributes) {
+      events.remove(attributes[key]);
+    }
+  }
+  for (node = node.firstChild; node; node = node.nextSibling) {
+    emitRemoved(events, node, ignore);
+  }
 }
 
 function Binding() {}
@@ -274,11 +291,11 @@ function NodeBinding(template, node) {
   this.template = template;
   this.node = node;
   node.$bindNode = this;
+  this.id = null;
 }
 NodeBinding.prototype = new Binding();
 
 function AttributeBindingsMap() {}
-
 function AttributeBinding(template, element, name) {
   this.template = template;
   this.element = element;
@@ -286,6 +303,7 @@ function AttributeBinding(template, element, name) {
   var map = element.$bindAttributes ||
     (element.$bindAttributes = new AttributeBindingsMap());
   map[name] = this;
+  this.id = null;
 }
 AttributeBinding.prototype = new Binding();
 
@@ -296,6 +314,7 @@ function RangeBinding(template, start, end, index) {
   this.index = index;
   start.$bindStart = this;
   end.$bindEnd = this;
+  this.id = null;
 }
 RangeBinding.prototype = new Binding();
 
