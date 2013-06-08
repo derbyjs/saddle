@@ -31,11 +31,17 @@ var template = new Template([
       new TextExpression('body')
     ])
   , new Text('\n')
-  , new Element('h1', null, [
-      new Text('Comments')
+  , new Comment('Go, go comment node!')
+  , new ConditionalBlock(['if comments', null], [[
+        new Element('h1', null, [
+          new Text('Comments')
+        ])
+      , new Text('\n')
+      ], [
+        new Text('No comments')
+      ]
     ])
-  , new Text('\n')
-  , new EachBlock('comments', [
+  , new EachBlock('each comments', [
       new Element('h2', null, [
         new Text('By ')
       , new Block('author', [
@@ -47,6 +53,8 @@ var template = new Template([
       }, [
         new TextExpression('body')
       ])
+    ], [
+      new Text('Lamers')
     ])
   ])
 ]);
@@ -62,8 +70,34 @@ function Context(events, data, parent) {
   this.parent = parent;
 }
 Context.prototype.get = function(name) {
+  // Strip out keywords
+  // TODO: use objects with filter method instead
+  var filter;
+  if (typeof name === 'string') {
+    if (/^if /.test(name)) {
+      name = name.slice(3);
+      filter = 'if';
+    } else if (/^unless /.test(name)) {
+      name = name.slice(7);
+      filter = 'unless';
+    } else if (/^else if /.test(name)) {
+      name = name.slice(8);
+      filter = 'if';
+    } else if (/^each /.test(name)) {
+      name = name.slice(5);
+      filter = 'each';
+    }
+  }
+
   if (name == null || name === 'this') return this.data;
   var value = this.data && this.data[name];
+  if (filter) {
+    if (filter === 'if') {
+      if (Array.isArray(value) && value.length === 0) value = null;
+    } else if (filter === 'unless') {
+      value = !value;
+    }
+  }
   return value || this.parent && this.parent.get(name);
 };
 Context.prototype.child = function(name) {

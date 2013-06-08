@@ -155,21 +155,84 @@ Block.prototype.update = function(context, binding) {
   replaceRange(context, start, end, fragment, binding);
 };
 
-function EachBlock(source, contents) {
+function ConditionalBlock(sources, contents) {
+  this.sources = sources;
+  this.beginning = sources[0];
+  this.ending = 'end ' + this.beginning;
+  this.contents = contents;
+}
+ConditionalBlock.prototype = new Item();
+ConditionalBlock.prototype.getHtml = function(context) {
+  var html = '<!--' + this.beginning + '-->';
+  for (var i = 0, len = this.sources.length; i < len; i++) {
+    var blockContext = context.child(this.sources[i]);
+    if (blockContext.get()) {
+      html += contentsHtml(this.contents[i], blockContext);
+      break;
+    }
+  }
+  return html + '<!--' + this.ending + '-->';
+};
+ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
+  var blockContext = context.child(this.source);
+  var start = document.createComment(this.beginning);
+  var end = document.createComment(this.ending);
+  parent.appendChild(start);
+  for (var i = 0, len = this.sources.length; i < len; i++) {
+    var blockContext = context.child(this.sources[i]);
+    if (blockContext.get()) {
+      appendContents(parent, this.contents[i], blockContext);
+      break;
+    }
+  }
+  parent.appendChild(end);
+  updateRange(context, binding, this, start, end);
+};
+ConditionalBlock.prototype.update = function(context, binding) {
+  // Get start and end in advance, since binding is mutated in getFragment
+  // var start = binding.start;
+  // var end = binding.end;
+  // var fragment = this.getFragment(context, binding);
+  // replaceRange(context, start, end, fragment, binding);
+};
+
+function EachBlock(source, contents, elseContents) {
   this.source = source;
   this.ending = 'end ' + source;
   this.contents = contents;
+  this.elseContents = elseContents;
 }
 EachBlock.prototype = new Item();
 EachBlock.prototype.getHtml = function(context) {
   var listContext = context.child(this.source);
   var items = listContext.get();
   var html = '<!--' + this.source + '-->';
-  for (var i = 0, len = items.length; i < len; i++) {
-    var itemContext = listContext.child(i);
-    html += contentsHtml(this.contents, itemContext) || '<!--empty-->';
+  if (items && items.length) {
+    for (var i = 0, len = items.length; i < len; i++) {
+      var itemContext = listContext.child(i);
+      html += contentsHtml(this.contents, itemContext) || '<!--empty-->';
+    }
+  } else if (this.elseContents) {
+    html += contentsHtml(this.elseContents, listContext);
   }
   return html + '<!--' + this.ending + '-->';
+};
+EachBlock.prototype.appendTo = function(parent, context, binding) {
+  var listContext = context.child(this.source);
+  var items = listContext.get();
+  var start = document.createComment(this.source);
+  var end = document.createComment(this.ending);
+  parent.appendChild(start);
+  if (items && items.length) {
+    for (var i = 0, len = items.length; i < len; i++) {
+      var itemContext = listContext.child(i);
+      this.appendItemTo(parent, itemContext, i);
+    }
+  } else if (this.elseContents) {
+    appendContents(parent, this.elseContents, listContext);
+  }
+  parent.appendChild(end);
+  updateRange(context, binding, this, start, end);
 };
 EachBlock.prototype.appendItemTo = function(parent, context, index, binding) {
   var before = parent.lastChild;
@@ -183,19 +246,6 @@ EachBlock.prototype.appendItemTo = function(parent, context, index, binding) {
     end = parent.lastChild;
   }
   updateRange(context, binding, this, start, end, index);
-};
-EachBlock.prototype.appendTo = function(parent, context, binding) {
-  var listContext = context.child(this.source);
-  var items = listContext.get();
-  var start = document.createComment(this.source);
-  var end = document.createComment(this.ending);
-  parent.appendChild(start);
-  for (var i = 0, len = items.length; i < len; i++) {
-    var itemContext = listContext.child(i);
-    this.appendItemTo(parent, itemContext, i);
-  }
-  parent.appendChild(end);
-  updateRange(context, binding, this, start, end);
 };
 EachBlock.prototype.update = function(context, binding) {
   var start = binding.start;
