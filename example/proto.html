@@ -38,7 +38,9 @@ var template = new Template([
   , new EachBlock('comments', [
       new Element('h2', null, [
         new Text('By ')
-      , new TextExpression('author')
+      , new Block('author', [
+          new TextExpression('this')
+        ])
       ])
     , new Element('div', {
         'class': new Attribute('body')
@@ -89,10 +91,10 @@ var context = new Context(events, {
   author: 'Alan Johnson'
 , body: 'I Love Handlebars'
 , comments: [{
-    author: 'Yehuda Katz'
+    author: 'Parker Blue'
   , body: 'Me too!'
   }, {
-    author: 'Yehuda Katz'
+    author: 'Sarah Shannon'
   , body: 'Me too!'
   }]
 });
@@ -103,7 +105,7 @@ el.innerHTML = template.getHtml(context);
 var fragment = template.getFragment(context);
 replaceBindings(fragment, el);
 
-// var j = 50;
+// var j = 5;
 // run();
 
 function run() {
@@ -111,8 +113,9 @@ function run() {
   var start = +new Date;
   var sum = 0;
   while (--i) {
-    while (el.firstChild) el.removeChild(el.firstChild)
-    el.appendChild(template.getFragment(context));
+    binding.update(context);
+    // while (el.firstChild) el.removeChild(el.firstChild)
+    // el.appendChild(template.getFragment(context));
     // el.innerHTML = template.getHtml(context);
   }
   console.log(new Date - start);

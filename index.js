@@ -22,16 +22,16 @@ function TextExpression(source) {
 }
 TextExpression.prototype = new Item();
 TextExpression.prototype.getHtml = function(context) {
-  return context.get(this.source);
+  return context.get(this.source) || '';
 };
 TextExpression.prototype.appendTo = function(parent, context) {
-  var data = context.get(this.source);
+  var data = context.get(this.source) || '';
   var node = document.createTextNode(data);
   parent.appendChild(node);
   context.events.add(new NodeBinding(this, node));
 };
 TextExpression.prototype.update = function(context, binding) {
-  binding.node.data = context.get(this.source);
+  binding.node.data = context.get(this.source) || '';
 };
 
 function Comment(data) {
@@ -51,16 +51,16 @@ function CommentExpression(source) {
 }
 CommentExpression.prototype = new Item();
 CommentExpression.prototype.getHtml = function(context) {
-  return '<!--' + context.get(this.source) + '-->';
+  return '<!--' + (context.get(this.source) || '') + '-->';
 };
 CommentExpression.prototype.appendTo = function(parent, context) {
-  var data = context.get(this.source);
+  var data = context.get(this.source) || '';
   var node = document.createComment(data);
   parent.appendChild(node);
   context.events.add(new NodeBinding(this, node));
 };
 CommentExpression.prototype.update = function(context, binding) {
-  binding.node.data = context.get(this.source);
+  binding.node.data = context.get(this.source) || '';
 };
 
 function Attribute(data) {
@@ -74,11 +74,11 @@ function AttributeExpression(source) {
   this.source = source;
 }
 AttributeExpression.prototype.getHtml = function(context) {
-  return context.get(this.source);
+  return context.get(this.source) || '';
 };
 AttributeExpression.prototype.get = function(context, element, name) {
   context.events.add(new AttributeBinding(this, element, name));
-  return context.get(this.source);
+  return context.get(this.source) || '';
 };
 AttributeExpression.prototype.update = function(context, binding) {
   var value = this.get(context);
@@ -318,15 +318,13 @@ function RangeBinding(template, start, end, index) {
 }
 RangeBinding.prototype = new Binding();
 
+// TODO: Detect if the DOM structures don't match and throw a useful error
 function replaceBindings(fragment, mirror) {
   var node = fragment.firstChild;
   var mirrorNode = mirror.firstChild;
   var nextMirrorNode;
   do {
-    nextMirrorNode = mirrorNode.nextSibling;
-
-    // Move bindings on the fragment to the corresponding node on the mirror
-    replaceNodeBindings(node, mirrorNode);
+    nextMirrorNode = mirrorNode && mirrorNode.nextSibling;
 
     // If ELEMENT_NODE
     if (node.nodeType === 1) {
@@ -334,10 +332,21 @@ function replaceBindings(fragment, mirror) {
 
     // If TEXT_NODE
     } else if (node.nodeType === 3) {
-      if (node.data !== mirrorNode.data) {
-        nextMirrorNode = mirrorNode.splitText(node.data.length);
+      if (mirrorNode && mirrorNode.nodeType === 3) {
+        if (node.data !== mirrorNode.data) {
+          nextMirrorNode = mirrorNode.splitText(node.data.length);
+        }
+      } else {
+        nextMirrorNode = mirrorNode;
+        mirrorNode = document.createTextNode('');
+        // Also works if nextMirrorNode is null
+        mirror.insertBefore(mirrorNode, nextMirrorNode);
       }
     }
+
+    // Move bindings on the fragment to the corresponding node on the mirror
+    replaceNodeBindings(node, mirrorNode);
+
     mirrorNode = nextMirrorNode;
     node = node.nextSibling;
   } while (node);
