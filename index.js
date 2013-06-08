@@ -161,7 +161,7 @@ function ConditionalBlock(sources, contents) {
   this.ending = 'end ' + this.beginning;
   this.contents = contents;
 }
-ConditionalBlock.prototype = new Item();
+ConditionalBlock.prototype = new Block();
 ConditionalBlock.prototype.getHtml = function(context) {
   var html = '<!--' + this.beginning + '-->';
   for (var i = 0, len = this.sources.length; i < len; i++) {
@@ -188,13 +188,6 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   parent.appendChild(end);
   updateRange(context, binding, this, start, end);
 };
-ConditionalBlock.prototype.update = function(context, binding) {
-  // Get start and end in advance, since binding is mutated in getFragment
-  // var start = binding.start;
-  // var end = binding.end;
-  // var fragment = this.getFragment(context, binding);
-  // replaceRange(context, start, end, fragment, binding);
-};
 
 function EachBlock(source, contents, elseContents) {
   this.source = source;
@@ -202,7 +195,7 @@ function EachBlock(source, contents, elseContents) {
   this.contents = contents;
   this.elseContents = elseContents;
 }
-EachBlock.prototype = new Item();
+EachBlock.prototype = new Block();
 EachBlock.prototype.getHtml = function(context) {
   var listContext = context.child(this.source);
   var items = listContext.get();
