@@ -17,21 +17,21 @@ Text.prototype.appendTo = function(parent) {
   parent.appendChild(node);
 };
 
-function TextExpression(source) {
-  this.source = source;
+function TextExpression(expression) {
+  this.expression = expression;
 }
 TextExpression.prototype = new Item();
 TextExpression.prototype.getHtml = function(context) {
-  return context.get(this.source) || '';
+  return context.get(this.expression) || '';
 };
 TextExpression.prototype.appendTo = function(parent, context) {
-  var data = context.get(this.source) || '';
+  var data = context.get(this.expression) || '';
   var node = document.createTextNode(data);
   parent.appendChild(node);
   context.events.add(new NodeBinding(this, node));
 };
 TextExpression.prototype.update = function(context, binding) {
-  binding.node.data = context.get(this.source) || '';
+  binding.node.data = context.get(this.expression) || '';
 };
 
 function Comment(data) {
@@ -46,21 +46,21 @@ Comment.prototype.appendTo = function(parent) {
   parent.appendChild(node);
 };
 
-function CommentExpression(source) {
-  this.source = source;
+function CommentExpression(expression) {
+  this.expression = expression;
 }
 CommentExpression.prototype = new Item();
 CommentExpression.prototype.getHtml = function(context) {
-  return '<!--' + (context.get(this.source) || '') + '-->';
+  return '<!--' + (context.get(this.expression) || '') + '-->';
 };
 CommentExpression.prototype.appendTo = function(parent, context) {
-  var data = context.get(this.source) || '';
+  var data = context.get(this.expression) || '';
   var node = document.createComment(data);
   parent.appendChild(node);
   context.events.add(new NodeBinding(this, node));
 };
 CommentExpression.prototype.update = function(context, binding) {
-  binding.node.data = context.get(this.source) || '';
+  binding.node.data = context.get(this.expression) || '';
 };
 
 function Attribute(data) {
@@ -70,15 +70,15 @@ Attribute.prototype.getHtml = Attribute.prototype.get = function(context) {
   return this.data;
 };
 
-function AttributeExpression(source) {
-  this.source = source;
+function AttributeExpression(expression) {
+  this.expression = expression;
 }
 AttributeExpression.prototype.getHtml = function(context) {
-  return context.get(this.source) || '';
+  return context.get(this.expression) || '';
 };
 AttributeExpression.prototype.get = function(context, element, name) {
   context.events.add(new AttributeBinding(this, element, name));
-  return context.get(this.source) || '';
+  return context.get(this.expression) || '';
 };
 AttributeExpression.prototype.update = function(context, binding) {
   var value = this.get(context);
@@ -126,21 +126,21 @@ Element.prototype.appendTo = function(parent, context) {
   parent.appendChild(element);
 };
 
-function Block(source, contents) {
-  this.source = source;
-  this.ending = 'end ' + source;
+function Block(expression, contents) {
+  this.expression = expression;
+  this.ending = '/' + expression;
   this.contents = contents;
 }
 Block.prototype = new Item();
 Block.prototype.getHtml = function(context) {
-  var blockContext = context.child(this.source);
-  return '<!--' + this.source + '-->' +
+  var blockContext = context.child(this.expression);
+  return '<!--' + this.expression + '-->' +
     contentsHtml(this.contents, blockContext) +
     '<!--' + this.ending + '-->';
 };
 Block.prototype.appendTo = function(parent, context, binding) {
-  var blockContext = context.child(this.source);
-  var start = document.createComment(this.source);
+  var blockContext = context.child(this.expression);
+  var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
   appendContents(parent, this.contents, blockContext);
@@ -155,17 +155,17 @@ Block.prototype.update = function(context, binding) {
   replaceRange(context, start, end, fragment, binding);
 };
 
-function ConditionalBlock(sources, contents) {
-  this.sources = sources;
-  this.beginning = sources[0];
-  this.ending = 'end ' + this.beginning;
+function ConditionalBlock(expressions, contents) {
+  this.expressions = expressions;
+  this.beginning = expressions[0];
+  this.ending = '/' + this.beginning;
   this.contents = contents;
 }
 ConditionalBlock.prototype = new Block();
 ConditionalBlock.prototype.getHtml = function(context) {
   var html = '<!--' + this.beginning + '-->';
-  for (var i = 0, len = this.sources.length; i < len; i++) {
-    var blockContext = context.child(this.sources[i]);
+  for (var i = 0, len = this.expressions.length; i < len; i++) {
+    var blockContext = context.child(this.expressions[i]);
     if (blockContext.get()) {
       html += contentsHtml(this.contents[i], blockContext);
       break;
@@ -174,12 +174,12 @@ ConditionalBlock.prototype.getHtml = function(context) {
   return html + '<!--' + this.ending + '-->';
 };
 ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
-  var blockContext = context.child(this.source);
+  var blockContext = context.child(this.expression);
   var start = document.createComment(this.beginning);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
-  for (var i = 0, len = this.sources.length; i < len; i++) {
-    var blockContext = context.child(this.sources[i]);
+  for (var i = 0, len = this.expressions.length; i < len; i++) {
+    var blockContext = context.child(this.expressions[i]);
     if (blockContext.get()) {
       appendContents(parent, this.contents[i], blockContext);
       break;
@@ -189,17 +189,17 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   updateRange(context, binding, this, start, end);
 };
 
-function EachBlock(source, contents, elseContents) {
-  this.source = source;
-  this.ending = 'end ' + source;
+function EachBlock(expression, contents, elseContents) {
+  this.expression = expression;
+  this.ending = '/' + expression;
   this.contents = contents;
   this.elseContents = elseContents;
 }
 EachBlock.prototype = new Block();
 EachBlock.prototype.getHtml = function(context) {
-  var listContext = context.child(this.source);
+  var listContext = context.child(this.expression);
   var items = listContext.get();
-  var html = '<!--' + this.source + '-->';
+  var html = '<!--' + this.expression + '-->';
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.child(i);
@@ -211,9 +211,9 @@ EachBlock.prototype.getHtml = function(context) {
   return html + '<!--' + this.ending + '-->';
 };
 EachBlock.prototype.appendTo = function(parent, context, binding) {
-  var listContext = context.child(this.source);
+  var listContext = context.child(this.expression);
   var items = listContext.get();
-  var start = document.createComment(this.source);
+  var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
   if (items && items.length) {

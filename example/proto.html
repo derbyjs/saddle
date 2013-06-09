@@ -17,41 +17,90 @@ var html =
     '<div class="body">Me Too!</div>' +
   '</div>'
 
+function Expression(source) {
+  this.source = source;
+}
+Expression.prototype.toString = function() {
+  return this.source;
+};
+Expression.prototype.get = function(context) {
+  return context.getProperty(this.source);
+};
+
+function IfExpression(source) {
+  this.source = source;
+  this.expression = new Expression(source);
+}
+IfExpression.prototype = new Expression;
+IfExpression.prototype.toString = function() {
+  return 'if ' + this.source;
+};
+IfExpression.prototype.get = function(context) {
+  var value = this.expression.get(context);
+  return (Array.isArray(value) && value.length === 0) ? null : value;
+};
+
+function UnlessExpression(source) {
+  this.source = source;
+  this.expression = new IfExpression(source);
+}
+UnlessExpression.prototype = new Expression;
+UnlessExpression.prototype.toString = function() {
+  return 'unless ' + this.source;
+};
+UnlessExpression.prototype.get = function(context) {
+  return !this.expression.get(context);
+};
+
+function EachExpression(source) {
+  this.source = source;
+  this.expression = new Expression(source);
+}
+EachExpression.prototype = new Expression;
+EachExpression.prototype.toString = function() {
+  return 'each ' + this.source;
+};
+EachExpression.prototype.get = function(context) {
+  return this.expression.get(context);
+};
+
 var template = new Template([
   new Element('div', {
     'class': new Attribute('post')
   }, [
     new Element('h1', null, [
       new Text('By ')
-    , new TextExpression('author')
+    , new TextExpression(new Expression('author'))
     ])
   , new Element('div', {
       'class': new Attribute('body')
     }, [
-      new TextExpression('body')
+      new TextExpression(new Expression('body'))
     ])
   , new Text('\n')
   , new Comment('Go, go comment node!')
-  , new ConditionalBlock(['if comments', null], [[
+  , new ConditionalBlock([new IfExpression('comments'), null], [[
         new Element('h1', null, [
           new Text('Comments')
         ])
       , new Text('\n')
       ], [
-        new Text('No comments')
+        new Element('h1', null, [
+          new Text('No comments')
+        ])
       ]
     ])
-  , new EachBlock('each comments', [
+  , new EachBlock(new EachExpression('comments'), [
       new Element('h2', null, [
         new Text('By ')
-      , new Block('author', [
-          new TextExpression('this')
+      , new Block('nonsense', [
+          new TextExpression(new Expression('author'))
         ])
       ])
     , new Element('div', {
         'class': new Attribute('body')
       }, [
-        new TextExpression('body')
+        new TextExpression(new Expression('body'))
       ])
     ], [
       new Text('Lamers')
@@ -69,39 +118,17 @@ function Context(events, data, parent) {
   this.data = data;
   this.parent = parent;
 }
-Context.prototype.get = function(name) {
-  // Strip out keywords
-  // TODO: use objects with filter method instead
-  var filter;
-  if (typeof name === 'string') {
-    if (/^if /.test(name)) {
-      name = name.slice(3);
-      filter = 'if';
-    } else if (/^unless /.test(name)) {
-      name = name.slice(7);
-      filter = 'unless';
-    } else if (/^else if /.test(name)) {
-      name = name.slice(8);
-      filter = 'if';
-    } else if (/^each /.test(name)) {
-      name = name.slice(5);
-      filter = 'each';
-    }
-  }
-
-  if (name == null || name === 'this') return this.data;
-  var value = this.data && this.data[name];
-  if (filter) {
-    if (filter === 'if') {
-      if (Array.isArray(value) && value.length === 0) value = null;
-    } else if (filter === 'unless') {
-      value = !value;
-    }
-  }
-  return value || this.parent && this.parent.get(name);
+Context.prototype.get = function(expression) {
+  return (expression == null) ? this.data :
+    (expression instanceof Expression) ? expression.get(this) :
+    this.getProperty(expression);
 };
-Context.prototype.child = function(name) {
-  var data = this.get(name);
+Context.prototype.getProperty = function(property) {
+  var value = this.data && this.data[property];
+  return value || this.parent && this.parent.getProperty(property);
+};
+Context.prototype.child = function(expression) {
+  var data = this.get(expression);
   return new Context(this.events, data, this);
 };
 
