@@ -1,14 +1,22 @@
-function Item() {}
-Item.prototype.getFragment = function(context, binding) {
+function Template(contents) {
+  this.contents = contents;
+}
+Template.prototype.getHtml = function(context) {
+  return contentsHtml(this.contents, context);
+};
+Template.prototype.getFragment = function(context, binding) {
   var fragment = document.createDocumentFragment();
   this.appendTo(fragment, context, binding);
   return fragment;
+};
+Template.prototype.appendTo = function(parent, context) {
+  appendContents(parent, this.contents, context);
 };
 
 function Text(data) {
   this.data = data;
 }
-Text.prototype = new Item();
+Text.prototype = new Template();
 Text.prototype.getHtml = function() {
   return this.data;
 };
@@ -20,7 +28,7 @@ Text.prototype.appendTo = function(parent) {
 function TextExpression(expression) {
   this.expression = expression;
 }
-TextExpression.prototype = new Item();
+TextExpression.prototype = new Template();
 TextExpression.prototype.getHtml = function(context) {
   return context.get(this.expression) || '';
 };
@@ -37,7 +45,7 @@ TextExpression.prototype.update = function(context, binding) {
 function Comment(data) {
   this.data = data;
 }
-Comment.prototype = new Item();
+Comment.prototype = new Template();
 Comment.prototype.getHtml = function() {
   return '<!--' + this.data + '-->';
 };
@@ -49,7 +57,7 @@ Comment.prototype.appendTo = function(parent) {
 function CommentExpression(expression) {
   this.expression = expression;
 }
-CommentExpression.prototype = new Item();
+CommentExpression.prototype = new Template();
 CommentExpression.prototype.getHtml = function(context) {
   return '<!--' + (context.get(this.expression) || '') + '-->';
 };
@@ -101,7 +109,7 @@ function Element(tag, attributes, contents) {
   this.attributes = attributes;
   this.contents = contents;
 }
-Element.prototype = new Item();
+Element.prototype = new Template();
 Element.prototype.getHtml = function(context) {
   var tagItems = [this.tag];
   for (var key in this.attributes) {
@@ -131,7 +139,7 @@ function Block(expression, contents) {
   this.ending = '/' + expression;
   this.contents = contents;
 }
-Block.prototype = new Item();
+Block.prototype = new Template();
 Block.prototype.getHtml = function(context) {
   var blockContext = context.child(this.expression);
   return '<!--' + this.expression + '-->' +
@@ -219,7 +227,7 @@ EachBlock.prototype.appendTo = function(parent, context, binding) {
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.child(i);
-      this.appendItemTo(parent, itemContext, i);
+      this.appendItemTo(parent, itemContext);
     }
   } else if (this.elseContents) {
     appendContents(parent, this.elseContents, listContext);
@@ -227,7 +235,7 @@ EachBlock.prototype.appendTo = function(parent, context, binding) {
   parent.appendChild(end);
   updateRange(context, binding, this, start, end);
 };
-EachBlock.prototype.appendItemTo = function(parent, context, index, binding) {
+EachBlock.prototype.appendItemTo = function(parent, context, binding) {
   var before = parent.lastChild;
   var start, end;
   appendContents(parent, this.contents, context);
@@ -238,42 +246,81 @@ EachBlock.prototype.appendItemTo = function(parent, context, index, binding) {
     start = (before && before.nextSibling) || parent.firstChild;
     end = parent.lastChild;
   }
-  updateRange(context, binding, this, start, end, index);
+  updateRange(context, binding, this, start, end, true);
 };
 EachBlock.prototype.update = function(context, binding) {
   var start = binding.start;
   var end = binding.end;
-  if (binding.index == null) {
-    var fragment = this.getFragment(context, binding);
-  } else {
+  if (binding.isItem) {
     var fragment = document.createDocumentFragment();
-    this.appendItemTo(fragment, context, binding.index, binding);
+    this.appendItemTo(fragment, context, binding);
+  } else {
+    var fragment = this.getFragment(context, binding);
   }
   replaceRange(context, start, end, fragment, binding);
 };
+EachBlock.prototype.insert = function(context, binding, index, howMany) {
+  var listContext = context.child(this.expression);
+  var items = listContext.get();
+  var node = indexStartNode(binding.start, index, binding.end);
+  var fragment = document.createDocumentFragment();
+  for (var i = index, len = index + howMany; i < len; i++) {
+    var itemContext = listContext.child(i);
+    this.appendItemTo(fragment, itemContext);
+  }
+  binding.start.parentNode.insertBefore(fragment, node);
+};
+EachBlock.prototype.remove = function(context, binding, index, howMany) {
+  var node = indexStartNode(binding.start, index, binding.end);
+  var i = 0;
+  var parent = binding.start.parentNode;
+  while (node) {
+    var nextNode = node.nextSibling;
+    parent.removeChild(node);
+    emitRemoved(context.events, node, binding);
+    if (node.$bindEnd) {
+      if (howMany === ++i) return;
+    }
+    node = nextNode;
+  }
+};
+EachBlock.prototype.move = function(context, binding, from, to, howMany) {
+  var node = indexStartNode(binding.start, from, binding.end);
+  var fragment = document.createDocumentFragment();
+  var i = 0;
+  while (node) {
+    var nextNode = node.nextSibling;
+    fragment.appendChild(node);
+    if (node.$bindEnd) {
+      if (howMany === ++i) break;
+    }
+    node = nextNode;
+  }
+  node = indexStartNode(binding.start, to, binding.end);
+  binding.start.parentNode.insertBefore(fragment, node);
+};
 
-function updateRange(context, binding, template, start, end, index) {
+function indexStartNode(node, index, endBound) {
+  var i = 0;
+  while (node = node.nextSibling) {
+    if (node === endBound) return node;
+    if (node.$bindStart) {
+      if (index === i) return node;
+      i++;
+    }
+  }
+}
+
+function updateRange(context, binding, template, start, end, isItem) {
   if (binding) {
     binding.start = start;
     binding.end = end;
     start.$bindStart = binding;
     end.$bindEnd = binding;
   } else {
-    context.events.add(new RangeBinding(template, start, end, index));
+    context.events.add(new RangeBinding(template, start, end, isItem));
   }
 }
-
-function Template(contents) {
-  this.contents = contents;
-}
-Template.prototype.getHtml = function(context) {
-  return contentsHtml(this.contents, context);
-};
-Template.prototype.getFragment = function(context) {
-  var fragment = document.createDocumentFragment();
-  appendContents(fragment, this.contents, context);
-  return fragment;
-};
 
 function appendContents(parent, contents, context) {
   for (var i = 0, len = contents.length; i < len; i++) {
@@ -327,7 +374,6 @@ function emitRemoved(events, node, ignore) {
 function Binding() {}
 Binding.prototype.update = function(context) {
   this.template.update(context, this);
-  context.events.update(this);
 };
 
 function NodeBinding(template, node) {
@@ -350,16 +396,25 @@ function AttributeBinding(template, element, name) {
 }
 AttributeBinding.prototype = new Binding();
 
-function RangeBinding(template, start, end, index) {
+function RangeBinding(template, start, end, isItem) {
   this.template = template;
   this.start = start;
   this.end = end;
-  this.index = index;
+  this.isItem = isItem;
   start.$bindStart = this;
   end.$bindEnd = this;
   this.id = null;
 }
 RangeBinding.prototype = new Binding();
+RangeBinding.prototype.insert = function(context, index, howMany) {
+  this.template.insert(context, this, index, howMany);
+};
+RangeBinding.prototype.remove = function(context, index, howMany) {
+  this.template.remove(context, this, index, howMany);
+};
+RangeBinding.prototype.move = function(context, from, to, howMany) {
+  this.template.move(context, this, from, to, howMany);
+};
 
 // TODO: Detect if the DOM structures don't match and throw a useful error
 function replaceBindings(fragment, mirror) {
@@ -419,3 +474,77 @@ function replaceNodeBindings(node, mirrorNode) {
     mirrorNode.$bindAttributes = attributes;
   }
 }
+
+
+// Expression & Context types should be implemented for the particular
+// semantics of a templating language
+
+function Expression(source) {
+  this.source = source;
+}
+Expression.prototype.toString = function() {
+  return this.source;
+};
+Expression.prototype.get = function(context) {
+  return context.getProperty(this.source);
+};
+
+function IfExpression(source) {
+  this.source = source;
+  this.expression = new Expression(source);
+}
+IfExpression.prototype = new Expression;
+IfExpression.prototype.toString = function() {
+  return 'if ' + this.source;
+};
+IfExpression.prototype.get = function(context) {
+  var value = this.expression.get(context);
+  return (Array.isArray(value) && value.length === 0) ? null : value;
+};
+
+function UnlessExpression(source) {
+  this.source = source;
+  this.expression = new IfExpression(source);
+}
+UnlessExpression.prototype = new Expression;
+UnlessExpression.prototype.toString = function() {
+  return 'unless ' + this.source;
+};
+UnlessExpression.prototype.get = function(context) {
+  return !this.expression.get(context);
+};
+
+function EachExpression(source) {
+  this.source = source;
+  this.expression = new Expression(source);
+}
+EachExpression.prototype = new Expression;
+EachExpression.prototype.toString = function() {
+  return 'each ' + this.source;
+};
+EachExpression.prototype.get = function(context) {
+  return this.expression.get(context);
+};
+
+function ContextEvents(add, remove) {
+  this.add = add;
+  this.remove = remove;
+}
+function Context(events, data, parent) {
+  this.events = events;
+  this.data = data;
+  this.parent = parent;
+}
+Context.prototype.get = function(expression) {
+  return (expression == null) ? this.data :
+    (expression instanceof Expression) ? expression.get(this) :
+    this.getProperty(expression);
+};
+Context.prototype.getProperty = function(property) {
+  var value = this.data && this.data[property];
+  return value || this.parent && this.parent.getProperty(property);
+};
+Context.prototype.child = function(expression) {
+  var data = this.get(expression);
+  return new Context(this.events, data, this);
+};

@@ -6,65 +6,10 @@
 
 <script src="../index.js"></script>
 <script>
-var html =
-  '<div class="post">' +
-    '<h1>By Alan Johnson</h1>' +
-    '<div class="body">I Love Handlebars</div>' +
-    '\n' +
-    '<h1>Comments</h1>' +
-    '\n' +
-    '<h2>By Yehuda Katz</h2>' +
-    '<div class="body">Me Too!</div>' +
-  '</div>'
 
-function Expression(source) {
-  this.source = source;
-}
-Expression.prototype.toString = function() {
-  return this.source;
-};
-Expression.prototype.get = function(context) {
-  return context.getProperty(this.source);
-};
+var _this = null;
 
-function IfExpression(source) {
-  this.source = source;
-  this.expression = new Expression(source);
-}
-IfExpression.prototype = new Expression;
-IfExpression.prototype.toString = function() {
-  return 'if ' + this.source;
-};
-IfExpression.prototype.get = function(context) {
-  var value = this.expression.get(context);
-  return (Array.isArray(value) && value.length === 0) ? null : value;
-};
-
-function UnlessExpression(source) {
-  this.source = source;
-  this.expression = new IfExpression(source);
-}
-UnlessExpression.prototype = new Expression;
-UnlessExpression.prototype.toString = function() {
-  return 'unless ' + this.source;
-};
-UnlessExpression.prototype.get = function(context) {
-  return !this.expression.get(context);
-};
-
-function EachExpression(source) {
-  this.source = source;
-  this.expression = new Expression(source);
-}
-EachExpression.prototype = new Expression;
-EachExpression.prototype.toString = function() {
-  return 'each ' + this.source;
-};
-EachExpression.prototype.get = function(context) {
-  return this.expression.get(context);
-};
-
-var template = new Template([
+var template = new Block(_this, [
   new Element('div', {
     'class': new Attribute('post')
   }, [
@@ -79,7 +24,7 @@ var template = new Template([
     ])
   , new Text('\n')
   , new Comment('Go, go comment node!')
-  , new ConditionalBlock([new IfExpression('comments'), null], [[
+  , new ConditionalBlock([new IfExpression('comments'), _this], [[
         new Element('h1', null, [
           new Text('Comments')
         ])
@@ -108,45 +53,23 @@ var template = new Template([
   ])
 ]);
 
-function ContextEvents(add, remove, update) {
-  this.add = add;
-  this.remove = remove;
-  this.update = update;
-}
-function Context(events, data, parent) {
-  this.events = events;
-  this.data = data;
-  this.parent = parent;
-}
-Context.prototype.get = function(expression) {
-  return (expression == null) ? this.data :
-    (expression instanceof Expression) ? expression.get(this) :
-    this.getProperty(expression);
-};
-Context.prototype.getProperty = function(property) {
-  var value = this.data && this.data[property];
-  return value || this.parent && this.parent.getProperty(property);
-};
-Context.prototype.child = function(expression) {
-  var data = this.get(expression);
-  return new Context(this.events, data, this);
-};
+// i = 8 makes about 9K DOM nodes
+// for (var i = 8; i--;) {
+//   template.contents = template.contents.concat(template.contents);
+// }
 
 var bindings = {};
 var count = 0;
 function addBinding(binding) {
   var id = binding.id = ++count;
   bindings[id] = binding;
-  console.log('add', binding, id);
+  // console.log('add', binding, id);
 }
 function removeBinding(binding) {
   delete bindings[binding.id];
-  console.log('remove', binding);
+  // console.log('remove', binding);
 }
-function updateBinding(binding) {
-  console.log('update', binding);
-}
-var events = new ContextEvents(addBinding, removeBinding, updateBinding);
+var events = new ContextEvents(addBinding, removeBinding);
 
 var context = new Context(events, {
   author: 'Alan Johnson'
@@ -156,31 +79,119 @@ var context = new Context(events, {
   , body: 'Me too!'
   }, {
     author: 'Sarah Shannon'
-  , body: 'Me too!'
+  , body: 'Sure thing'
+  }, {
+    author: 'Kim Kelley'
+  , body: 'Meh'
   }]
 });
 
-var el = document.getElementById('entry');
-el.innerHTML = template.getHtml(context);
+window.onload = function() {
+  // var start = +new Date
+  var el = document.getElementById('entry');
+  // now = +new Date; console.log(new Date - start); start = now;
+  var html = template.getHtml(context);
+  // now = +new Date; console.log(new Date - start); start = now;
+  el.innerHTML = html;
+  // now = +new Date; console.log(new Date - start); start = now;
 
-var fragment = template.getFragment(context);
-replaceBindings(fragment, el);
+  var fragment = template.getFragment(context);
+  // now = +new Date; console.log(new Date - start); start = now;
+  replaceBindings(fragment, el);
+  // now = +new Date; console.log(new Date - start); start = now;
 
-// var j = 5;
-// run();
+  var binding = bindings[count];
+  var j = 20;
+  var times = [];
+  // var html = template.getHtml(context);
+  // run();
 
-function run() {
-  var i = 10000;
-  var start = +new Date;
-  var sum = 0;
-  while (--i) {
-    binding.update(context);
-    // while (el.firstChild) el.removeChild(el.firstChild)
-    // el.appendChild(template.getFragment(context));
-    // el.innerHTML = template.getHtml(context);
+  function median(values) {
+    values.sort();
+    var middle = Math.floor(values.length / 2);
+    return (values.length % 2) ?
+      values[middle] :
+      (values[middle - 1] + values[middle]) / 2;
   }
-  console.log(new Date - start);
-  if (--j) setTimeout(run, 50);
+
+  function run() {
+    var i = 1;
+    var start = +new Date;
+    var sum = 0;
+    while (i--) {
+      binding.update(context);
+  
+      // el.innerHTML = template.getHtml(context);
+  
+      // el.innerHTML = html
+  
+      // var clone = el.cloneNode(true);
+      // el.parentNode.replaceChild(clone, el);
+      // el = clone;
+    }
+    var time = new Date - start;
+    times.push(time);
+    console.log(time);
+    if (--j) {
+      setTimeout(run, 50);
+    } else {
+      console.log('MEDIAN:', median(times));
+    }
+  }
 }
+
+// Testing in Mac Chrome 27 & Firefox 21
+// In Chrome, large templates have equivalent performance with either approach. Small template updates are significantly faster with create than with HTML in Chrome. Firefox is about 2.5x slower doing create compared to HTML.
+// At large template sizes, Performance of rendering and updating is linear with the number of DOM nodes. Traversing for cleanup of removed nodes is somewhat worse than linear. With a DOM for a realistic app, performance overhead of cleanup is about 30%.
+// HTML Rendering doesn't create or clean up bindings, so most of the difference in Chrome appears to be the overhead of traversing to do binding cleanup
+
+// 100 nodes, 1000 times
+
+// Clone & replace: 21 ms
+// innerHTML from string: 120 ms
+// HTML: 142.5 ms
+// Create: 122.5 ms
+// Create, no cleanup: 87 ms
+// Firefox Create: 293 ms
+// Firefox HTML: 120.5 ms
+
+// 9K nodes, 19 times
+
+// Clone & replace: 77 ms
+// innerHTML from string: 341.5 ms
+// HTML: 419 ms
+// Create: 527 ms
+// Create, no cleanup: 421 ms
+// Firefox HTML: 491.5 ms
+// Firefox Create: ~1300 ms (actually 3000, but appears to be a garbage collection issue that doesn't happen when doing a more realistic single render)
+// 1x Firefox Create: 68 ms
+// 1x Chrome Create: 28 ms
+// 1x Chrome HTML: 25.5 ms
+
+// 1.25775656324582
+
+// 18K nodes, 19 times
+
+// Clone & replace: 153.5 ms
+// innerHTML from string: 703 ms
+// HTML: 867.5 ms
+// Create: 1119.5 ms
+// Create, no cleanup: 885.5
+// 1x Create: 65 ms
+// 1x HTML: 52 ms
+
+// 1.29048991354467
+
+// 36K nodes, 19 times
+
+// Clone & replace: 323.5 ms
+// innerHTML from string: 1427.5 ms
+// HTML: 1763.5
+// Create: 2416
+// Create, no cleanup: 1785.5
+// 1x Create: 153 ms
+// 1x HTML 101.5 ms
+
+// 1.37039137833239
 
 </script>
