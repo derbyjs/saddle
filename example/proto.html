@@ -7,7 +7,7 @@
 <script src="../index.js"></script>
 <script>
 
-var _this = null;
+var _this = new ThisExpression();
 
 var template = new Block(_this, [
   new Element('div', {
@@ -86,10 +86,10 @@ var context = new Context(events, {
   }]
 });
 
+var binding;
 window.onload = function() {
-  // var start = +new Date
+  var start = +new Date
   var el = document.getElementById('entry');
-  // now = +new Date; console.log(new Date - start); start = now;
   var html = template.getHtml(context);
   // now = +new Date; console.log(new Date - start); start = now;
   el.innerHTML = html;
@@ -99,12 +99,15 @@ window.onload = function() {
   // now = +new Date; console.log(new Date - start); start = now;
   replaceBindings(fragment, el);
   // now = +new Date; console.log(new Date - start); start = now;
+  binding = bindings[count];
+}
 
-  var binding = bindings[count];
-  var j = 20;
+function bench() {
+  var j = 5;
   var times = [];
-  // var html = template.getHtml(context);
-  // run();
+  var el = document.getElementById('entry');
+  var html = template.getHtml(context);
+  run();
 
   function median(values) {
     values.sort();

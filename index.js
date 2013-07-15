@@ -278,7 +278,7 @@ EachBlock.prototype.remove = function(context, binding, index, howMany) {
     var nextNode = node.nextSibling;
     parent.removeChild(node);
     emitRemoved(context.events, node, binding);
-    if (node.$bindEnd) {
+    if (getNodeProperty(node, '$bindEnd')) {
       if (howMany === ++i) return;
     }
     node = nextNode;
@@ -291,7 +291,7 @@ EachBlock.prototype.move = function(context, binding, from, to, howMany) {
   while (node) {
     var nextNode = node.nextSibling;
     fragment.appendChild(node);
-    if (node.$bindEnd) {
+    if (getNodeProperty(node, '$bindEnd')) {
       if (howMany === ++i) break;
     }
     node = nextNode;
@@ -304,7 +304,7 @@ function indexStartNode(node, index, endBound) {
   var i = 0;
   while (node = node.nextSibling) {
     if (node === endBound) return node;
-    if (node.$bindStart) {
+    if (getNodeProperty(node, '$bindStart')) {
       if (index === i) return node;
       i++;
     }
@@ -315,8 +315,8 @@ function updateRange(context, binding, template, start, end, isItem) {
   if (binding) {
     binding.start = start;
     binding.end = end;
-    start.$bindStart = binding;
-    end.$bindEnd = binding;
+    setNodeProperty(start, '$bindStart', binding);
+    setNodeProperty(end, '$bindEnd', binding);
   } else {
     context.events.add(new RangeBinding(template, start, end, isItem));
   }
@@ -356,11 +356,11 @@ function replaceRange(context, start, end, fragment, binding) {
   parent.insertBefore(fragment, nextNode);
 }
 function emitRemoved(events, node, ignore) {
-  var binding = node.$bindNode;
+  var binding = getNodeProperty(node, '$bindNode');
   if (binding && binding !== ignore) events.remove(binding);
-  binding = node.$bindStart;
+  binding = getNodeProperty(node, '$bindStart');
   if (binding && binding !== ignore) events.remove(binding);
-  var attributes = node.$bindAttributes;
+  var attributes = getNodeProperty(node, '$bindAttributes');
   if (attributes) {
     for (var key in attributes) {
       events.remove(attributes[key]);
@@ -379,7 +379,7 @@ Binding.prototype.update = function(context) {
 function NodeBinding(template, node) {
   this.template = template;
   this.node = node;
-  node.$bindNode = this;
+  setNodeProperty(node, '$bindNode', this);
   this.id = null;
 }
 NodeBinding.prototype = new Binding();
@@ -389,8 +389,8 @@ function AttributeBinding(template, element, name) {
   this.template = template;
   this.element = element;
   this.name = name;
-  var map = element.$bindAttributes ||
-    (element.$bindAttributes = new AttributeBindingsMap());
+  var map = getNodeProperty(element, '$bindAttributes') ||
+    (setNodeProperty(element, '$bindAttributes', new AttributeBindingsMap()));
   map[name] = this;
   this.id = null;
 }
@@ -401,8 +401,8 @@ function RangeBinding(template, start, end, isItem) {
   this.start = start;
   this.end = end;
   this.isItem = isItem;
-  start.$bindStart = this;
-  end.$bindEnd = this;
+  setNodeProperty(start, '$bindStart', this);
+  setNodeProperty(end, '$bindEnd', this);
   this.id = null;
 }
 RangeBinding.prototype = new Binding();
@@ -432,12 +432,25 @@ function replaceBindings(fragment, mirror) {
     } else if (node.nodeType === 3) {
       if (mirrorNode && mirrorNode.nodeType === 3) {
         if (node.data !== mirrorNode.data) {
-          nextMirrorNode = mirrorNode.splitText(node.data.length);
+          nextMirrorNode = splitData(mirrorNode, node.data.length);
         }
       } else {
         nextMirrorNode = mirrorNode;
         mirrorNode = document.createTextNode('');
         // Also works if nextMirrorNode is null
+        mirror.insertBefore(mirrorNode, nextMirrorNode);
+      }
+
+    // If COMMENT_NODE
+    } else if (node.nodeType === 8) {
+      // IE sometimes doesn't create CommentNodes that are in HTML
+      if (
+        !mirrorNode ||
+        (mirrorNode.nodeType !== 8) ||
+        (node.data !== mirrorNode.data)
+      ) {
+        nextMirrorNode = mirrorNode;
+        mirrorNode = node.cloneNode(false);
         mirror.insertBefore(mirrorNode, nextMirrorNode);
       }
     }
@@ -451,27 +464,27 @@ function replaceBindings(fragment, mirror) {
 }
 
 function replaceNodeBindings(node, mirrorNode) {
-  var binding = node.$bindNode;
+  var binding = getNodeProperty(node, '$bindNode');
   if (binding) {
     binding.node = mirrorNode;
-    mirrorNode.$bindNode = binding;
+    setNodeProperty(node, '$bindNode', binding);
   }
-  binding = node.$bindStart;
+  binding = getNodeProperty(node, '$bindStart');
   if (binding) {
     binding.start = mirrorNode;
-    mirrorNode.$bindStart = binding;
+    setNodeProperty(mirrorNode, '$bindStart', binding);
   }
-  binding = node.$bindEnd;
+  binding = getNodeProperty(node, '$bindEnd');
   if (binding) {
     binding.end = mirrorNode;
-    mirrorNode.$bindEnd = binding;
+    setNodeProperty(mirrorNode, '$bindEnd', binding);
   }
-  var attributes = node.$bindAttributes;
+  var attributes = getNodeProperty(node, '$bindAttributes');
   if (attributes) {
     for (var key in attributes) {
       attributes[key].element = mirrorNode;
     }
-    mirrorNode.$bindAttributes = attributes;
+    setNodeProperty(mirrorNode, '$bindAttributes', attributes);
   }
 }
 
@@ -487,6 +500,14 @@ Expression.prototype.toString = function() {
 };
 Expression.prototype.get = function(context) {
   return context.getProperty(this.source);
+};
+
+function ThisExpression() {}
+ThisExpression.prototype.toString = function() {
+  return 'this';
+};
+ThisExpression.prototype.get = function(context) {
+  return context.get();
 };
 
 function IfExpression(source) {
@@ -548,3 +569,86 @@ Context.prototype.child = function(expression) {
   var data = this.get(expression);
   return new Context(this.events, data, this);
 };
+
+function setNodeProperty(node, key, value) {
+  return node[key] = value;
+}
+function getNodeProperty(node, key) {
+  return node[key];
+}
+
+//// IE shims & workarounds ////
+
+if (!Array.isArray) {
+  Array.isArray = function(value) {
+    return Object.prototype.toString.call(value) === "[object Array]";
+  };
+}
+
+function ObjectMapKeys() {}
+function ObjectMapValues() {}
+function ObjectMap() {
+  this.count = 0;
+  this.keys = new ObjectMapKeys();
+  this.values = new ObjectMapValues();
+}
+ObjectMap.prototype.keyId = function(key) {
+  var keys = this.keys;
+  for (var id in keys) {
+    if (keys[id] === key) return id;
+  }
+};
+ObjectMap.prototype.add = function(key, value) {
+  var id = (++this.count).toString();
+  this.keys[id] = key;
+  this.values[id] = value;
+};
+ObjectMap.prototype.remove = function(key) {
+  var id = this.keyId(key);
+  if (!id) return;
+  delete this.keys[id];
+  delete this.values[id];
+};
+ObjectMap.prototype.get = function(key) {
+  var id = this.keyId(key);
+  return id && this.values[id];
+};
+function NodeProperties() {}
+
+try {
+  // TEXT_NODEs are not expando prior to IE9
+  document.createTextNode('').$try = 0;
+} catch (err) {
+  setNodeProperty = function(node, key, value) {
+    // If TEXT_NODE
+    if (node.nodeType === 3) {
+      var parent = node.parentNode;
+      var objectMap = parent.$bindMap || (parent.$bindMap = new ObjectMap());
+      var nodeProperties = objectMap.get(node);
+      if (nodeProperties) {
+        return nodeProperties[key] = value;
+      }
+      nodeProperties = new NodeProperties();
+      objectMap.add(node, nodeProperties);
+      return nodeProperties[key] = value;
+    }
+    return node[key] = value;
+  };
+  getNodeProperty = function(node, key) {
+    if (node.nodeType === 3) {
+      var objectMap = parent.$bindMap;
+      var nodeProperties = objectMap && objectMap.get(node);
+      return nodeProperties && nodeProperties[key];
+    }
+    return node[key];
+  };
+}
+
+// Equivalent to textNode.splitText, which is buggy in IE <=9
+function splitData(node, index) {
+  var newNode = node.cloneNode(false);
+  newNode.deleteData(0, index);
+  node.deleteData(index, node.length - index);
+  node.parentNode.insertBefore(newNode, node.nextSibling);
+  return newNode;
+}
