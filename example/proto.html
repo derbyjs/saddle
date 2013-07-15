@@ -4,22 +4,25 @@
 
 <div id="entry"></div>
 
+<script>
+module = {};
+</script>
 <script src="../index.js"></script>
 <script>
 
 var _this = new ThisExpression();
 
 var template = new Block(_this, [
-  new Element('div', {
+  new Element('div', new AttributesMap({
     'class': new Attribute('post')
-  }, [
+  }), [
     new Element('h1', null, [
       new Text('By ')
     , new TextExpression(new Expression('author'))
     ])
-  , new Element('div', {
+  , new Element('div', new AttributesMap({
       'class': new Attribute('body')
-    }, [
+    }), [
       new TextExpression(new Expression('body'))
     ])
   , new Text('\n')
@@ -42,9 +45,9 @@ var template = new Block(_this, [
           new TextExpression(new Expression('author'))
         ])
       ])
-    , new Element('div', {
+    , new Element('div', new AttributesMap({
         'class': new Attribute('body')
-      }, [
+      }), [
         new TextExpression(new Expression('body'))
       ])
     ], [
@@ -54,9 +57,9 @@ var template = new Block(_this, [
 ]);
 
 // i = 8 makes about 9K DOM nodes
-// for (var i = 8; i--;) {
-//   template.contents = template.contents.concat(template.contents);
-// }
+for (var i = 8; i--;) {
+  template.contents = template.contents.concat(template.contents);
+}
 
 var bindings = {};
 var count = 0;
@@ -103,7 +106,7 @@ window.onload = function() {
 }
 
 function bench() {
-  var j = 5;
+  var j = 20;
   var times = [];
   var el = document.getElementById('entry');
   var html = template.getHtml(context);
@@ -123,7 +126,7 @@ function bench() {
     var sum = 0;
     while (i--) {
       binding.update(context);
-  
+
       // el.innerHTML = template.getHtml(context);
   
       // el.innerHTML = html

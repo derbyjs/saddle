@@ -1,3 +1,34 @@
+module.exports = {
+  Template: Template
+, Text: Text
+, TextExpression: TextExpression
+, Comment: Comment
+, CommentExpression: CommentExpression
+, Element: Element
+, Block: Block
+, ConditionalBlock: ConditionalBlock
+, EachBlock: EachBlock
+
+, Attribute: Attribute
+, AttributeExpression: AttributeExpression
+, PropertyExpression: PropertyExpression
+, AttributesMap: AttributesMap
+
+, Binding: Binding
+, NodeBinding: NodeBinding
+, AttributeBinding: AttributeBinding
+, RangeBinding: RangeBinding
+, replaceBindings: replaceBindings
+
+, Expression: Expression
+, ThisExpression: ThisExpression
+, IfExpression: IfExpression
+, UnlessExpression: UnlessExpression
+, EachExpression: EachExpression
+, ContextEvents: ContextEvents
+, Context: Context
+};
+
 function Template(contents) {
   this.contents = contents;
 }
@@ -82,19 +113,31 @@ function AttributeExpression(expression) {
   this.expression = expression;
 }
 AttributeExpression.prototype.getHtml = function(context) {
-  return context.get(this.expression) || '';
+  return context.get(this.expression);
 };
 AttributeExpression.prototype.get = function(context, element, name) {
   context.events.add(new AttributeBinding(this, element, name));
-  return context.get(this.expression) || '';
+  return context.get(this.expression);
 };
 AttributeExpression.prototype.update = function(context, binding) {
-  var value = this.get(context);
-  if (value == null) {
+  var value = context.get(this.expression);
+  if (value === false || value == null) {
     binding.element.removeAttribute(binding.name);
+  } else if (value === true) {
+    binding.element.setAttribute(binding.name, '');
   } else {
-    binding.element.setAttribute(value);
+    binding.element.setAttribute(binding.name, value);
   }
+};
+
+function PropertyExpression(expression, property) {
+  this.expression = expression;
+  this.property = property;
+}
+PropertyExpression.prototype = new AttributeExpression();
+PropertyExpression.prototype.update = function(context, binding) {
+  var value = context.get(this.expression);
+  binding.element[this.property] = (value == null) ? '' : value;
 };
 
 function AttributesMap(object) {
@@ -114,7 +157,11 @@ Element.prototype.getHtml = function(context) {
   var tagItems = [this.tag];
   for (var key in this.attributes) {
     var value = this.attributes[key].getHtml(context);
-    if (value != null) tagItems.push(key + '="' + value + '"');
+    if (value === true) {
+      tagItems.push(key);
+    } else if (value !== false && value != null) {
+      tagItems.push(key + '="' + value + '"');
+    }
   }
   var startTag = '<' + tagItems.join(' ') + '>';
   var endTag = '</' + this.tag + '>';
@@ -128,7 +175,11 @@ Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tag);
   for (var key in this.attributes) {
     var value = this.attributes[key].get(context, element, key);
-    element.setAttribute(key, value);
+    if (value === true) {
+      element.setAttribute(key, '');
+    } else if (value !== false && value != null) {
+      element.setAttribute(key, value);
+    }
   }
   if (this.contents) appendContents(element, this.contents, context);
   parent.appendChild(element);
@@ -570,18 +621,18 @@ Context.prototype.child = function(expression) {
   return new Context(this.events, data, this);
 };
 
-function setNodeProperty(node, key, value) {
+var setNodeProperty = function(node, key, value) {
   return node[key] = value;
-}
-function getNodeProperty(node, key) {
+};
+var getNodeProperty = function(node, key) {
   return node[key];
-}
+};
 
 //// IE shims & workarounds ////
 
 if (!Array.isArray) {
   Array.isArray = function(value) {
-    return Object.prototype.toString.call(value) === "[object Array]";
+    return Object.prototype.toString.call(value) === '[object Array]';
   };
 }
 
@@ -635,8 +686,9 @@ try {
     return node[key] = value;
   };
   getNodeProperty = function(node, key) {
+    // If TEXT_NODE
     if (node.nodeType === 3) {
-      var objectMap = parent.$bindMap;
+      var objectMap = node.parentNode.$bindMap;
       var nodeProperties = objectMap && objectMap.get(node);
       return nodeProperties && nodeProperties[key];
     }
