@@ -147,10 +147,11 @@ function AttributesMap(object) {
   }
 }
 
-function Element(tag, attributes, contents) {
+function Element(tag, attributes, contents, isVoid) {
   this.tag = tag;
   this.attributes = attributes;
   this.contents = contents;
+  this.isVoid = isVoid;
 }
 Element.prototype = new Template();
 Element.prototype.getHtml = function(context) {
@@ -169,7 +170,7 @@ Element.prototype.getHtml = function(context) {
     var inner = contentsHtml(this.contents, context);
     return startTag + inner + endTag;
   }
-  return startTag + endTag;
+  return (this.isVoid) ? startTag : startTag + endTag;
 };
 Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tag);
@@ -379,7 +380,6 @@ function appendContents(parent, contents, context) {
   }
 }
 function contentsHtml(contents, context) {
-  if (context == null) return '';
   var html = '';
   for (var i = 0, len = contents.length; i < len; i++) {
     html += contents[i].getHtml(context);

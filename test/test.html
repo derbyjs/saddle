@@ -8,7 +8,16 @@
 <script src="../node_modules/expect.js/expect.js"></script>
 <script src="../node_modules/mocha/mocha.js"></script>
 <script>mocha.setup('bdd')</script>
+
+<script>
+  var module = {};
+</script>
+<script src="../index.js"></script>
+<script>
+  var saddle = module.exports;
+</script>
 <script src="test.mocha.js"></script>
+
 <script>
   mocha.checkLeaks();
   mocha.globals(['jQuery']);
