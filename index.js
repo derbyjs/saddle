@@ -611,7 +611,7 @@ Context.prototype.onAdd = function(binding) {
   this.meta.onAdd(binding);
 };
 Context.prototype.onRemove = function(binding) {
-  this.mtea.onRemove(binding);
+  this.meta.onRemove(binding);
 };
 Context.prototype.get = function(expression) {
   return (expression == null) ? this.data :
