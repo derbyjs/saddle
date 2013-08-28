@@ -602,6 +602,10 @@ function ContextMeta(options) {
   this.onAdd = options.onAdd || noop;
   this.onRemove = options.onRemove || noop;
 }
+
+// Contexts should be user defined.
+//
+// The only mandatory functions in the context class are .child() and .get().
 function Context(meta, data, parent) {
   this.meta = meta;
   this.data = data;
