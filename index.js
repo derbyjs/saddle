@@ -124,7 +124,7 @@ AttributeExpression.prototype.update = function(context, binding) {
   if (value === false || value == null) {
     binding.element.removeAttribute(binding.name);
   } else if (value === true) {
-    binding.element.setAttribute(binding.name, '');
+    binding.element.setAttribute(binding.name, binding.name);
   } else {
     binding.element.setAttribute(binding.name, value);
   }
@@ -177,7 +177,7 @@ Element.prototype.appendTo = function(parent, context) {
   for (var key in this.attributes) {
     var value = this.attributes[key].get(context, element, key);
     if (value === true) {
-      element.setAttribute(key, '');
+      element.setAttribute(key, key);
     } else if (value !== false && value != null) {
       element.setAttribute(key, value);
     }
