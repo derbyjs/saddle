@@ -25,7 +25,7 @@ module.exports = {
 , IfExpression: IfExpression
 , UnlessExpression: UnlessExpression
 , EachExpression: EachExpression
-, ContextEvents: ContextEvents
+, ContextMeta: ContextMeta
 , Context: Context
 };
 
@@ -67,7 +67,7 @@ TextExpression.prototype.appendTo = function(parent, context) {
   var data = context.get(this.expression) || '';
   var node = document.createTextNode(data);
   parent.appendChild(node);
-  context.events.add(new NodeBinding(this, node));
+  context.onAdd(new NodeBinding(this, node));
 };
 TextExpression.prototype.update = function(context, binding) {
   binding.node.data = context.get(this.expression) || '';
@@ -96,7 +96,7 @@ CommentExpression.prototype.appendTo = function(parent, context) {
   var data = context.get(this.expression) || '';
   var node = document.createComment(data);
   parent.appendChild(node);
-  context.events.add(new NodeBinding(this, node));
+  context.onAdd(new NodeBinding(this, node));
 };
 CommentExpression.prototype.update = function(context, binding) {
   binding.node.data = context.get(this.expression) || '';
@@ -116,7 +116,7 @@ AttributeExpression.prototype.getHtml = function(context) {
   return context.get(this.expression);
 };
 AttributeExpression.prototype.get = function(context, element, name) {
-  context.events.add(new AttributeBinding(this, element, name));
+  context.onAdd(new AttributeBinding(this, element, name));
   return context.get(this.expression);
 };
 AttributeExpression.prototype.update = function(context, binding) {
@@ -370,7 +370,7 @@ function updateRange(context, binding, template, start, end, isItem) {
     setNodeProperty(start, '$bindStart', binding);
     setNodeProperty(end, '$bindEnd', binding);
   } else {
-    context.events.add(new RangeBinding(template, start, end, isItem));
+    context.onAdd(new RangeBinding(template, start, end, isItem));
   }
 }
 
@@ -390,7 +390,7 @@ function replaceRange(context, start, end, fragment, binding) {
   var parent = start.parentNode;
   if (start === end) {
     parent.replaceChild(fragment, start);
-    emitRemoved(context.events, start, binding);
+    emitRemoved(context, start, binding);
     return;
   }
   // Remove all nodes from start to end, inclusive
@@ -399,26 +399,26 @@ function replaceRange(context, start, end, fragment, binding) {
   while (node) {
     nextNode = node.nextSibling;
     parent.removeChild(node);
-    emitRemoved(context.events, node, binding);
+    emitRemoved(context, node, binding);
     if (node === end) break;
     node = nextNode;
   }
   // This also works if nextNode is null, by doing an append
   parent.insertBefore(fragment, nextNode);
 }
-function emitRemoved(events, node, ignore) {
+function emitRemoved(context, node, ignore) {
   var binding = getNodeProperty(node, '$bindNode');
-  if (binding && binding !== ignore) events.remove(binding);
+  if (binding && binding !== ignore) context.onRemove(binding);
   binding = getNodeProperty(node, '$bindStart');
-  if (binding && binding !== ignore) events.remove(binding);
+  if (binding && binding !== ignore) context.onRemove(binding);
   var attributes = getNodeProperty(node, '$bindAttributes');
   if (attributes) {
     for (var key in attributes) {
-      events.remove(attributes[key]);
+      context.onRemove(attributes[key]);
     }
   }
   for (node = node.firstChild; node; node = node.nextSibling) {
-    emitRemoved(events, node, ignore);
+    emitRemoved(context, node, ignore);
   }
 }
 
@@ -598,27 +598,34 @@ EachExpression.prototype.get = function(context) {
   return this.expression.get(context);
 };
 
-function ContextEvents(add, remove) {
-  this.add = add;
-  this.remove = remove;
+function ContextMeta(options) {
+  this.onAdd = options.onAdd || noop;
+  this.onRemove = options.onRemove || noop;
 }
-function Context(events, data, parent) {
-  this.events = events;
+function Context(meta, data, parent) {
+  this.meta = meta;
   this.data = data;
   this.parent = parent;
 }
+Context.prototype.onAdd = function(binding) {
+  this.meta.onAdd(binding);
+};
+Context.prototype.onRemove = function(binding) {
+  this.mtea.onRemove(binding);
+};
 Context.prototype.get = function(expression) {
   return (expression == null) ? this.data :
     (expression instanceof Expression) ? expression.get(this) :
     this.getProperty(expression);
 };
 Context.prototype.getProperty = function(property) {
-  var value = this.data && this.data[property];
-  return value || this.parent && this.parent.getProperty(property);
+  return (this.data && this.data.hasOwnProperty(property)) ?
+    this.data[property] :
+    this.parent && this.parent.getProperty(property);
 };
 Context.prototype.child = function(expression) {
   var data = this.get(expression);
-  return new Context(this.events, data, this);
+  return new Context(this.meta, data, this);
 };
 
 var setNodeProperty = function(node, key, value) {
@@ -704,3 +711,5 @@ function splitData(node, index) {
   node.parentNode.insertBefore(newNode, node.nextSibling);
   return newNode;
 }
+
+function noop() {}

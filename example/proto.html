@@ -72,9 +72,11 @@ function removeBinding(binding) {
   delete bindings[binding.id];
   // console.log('remove', binding);
 }
-var events = new ContextEvents(addBinding, removeBinding);
-
-var context = new Context(events, {
+var meta = new ContextMeta({
+  onAdd: addBinding
+, onRemove: removeBinding
+});
+var context = new Context(meta, {
   author: 'Alan Johnson'
 , body: 'I Love Handlebars'
 , comments: [{
@@ -94,14 +96,14 @@ window.onload = function() {
   var start = +new Date
   var el = document.getElementById('entry');
   var html = template.getHtml(context);
-  // now = +new Date; console.log(new Date - start); start = now;
+  now = +new Date; console.log(new Date - start); start = now;
   el.innerHTML = html;
-  // now = +new Date; console.log(new Date - start); start = now;
+  now = +new Date; console.log(new Date - start); start = now;
 
   var fragment = template.getFragment(context);
-  // now = +new Date; console.log(new Date - start); start = now;
+  now = +new Date; console.log(new Date - start); start = now;
   replaceBindings(fragment, el);
-  // now = +new Date; console.log(new Date - start); start = now;
+  now = +new Date; console.log(new Date - start); start = now;
   binding = bindings[count];
 }
 
