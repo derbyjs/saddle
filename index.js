@@ -467,7 +467,6 @@ RangeBinding.prototype.move = function(context, from, to, howMany) {
   this.template.move(context, this, from, to, howMany);
 };
 
-// TODO: Detect if the DOM structures don't match and throw a useful error
 function replaceBindings(fragment, mirror) {
   var node = fragment.firstChild;
   var mirrorNode = mirror.firstChild;
@@ -475,12 +474,8 @@ function replaceBindings(fragment, mirror) {
   do {
     nextMirrorNode = mirrorNode && mirrorNode.nextSibling;
 
-    // If ELEMENT_NODE
-    if (node.nodeType === 1) {
-      replaceBindings(node, mirrorNode);
-
-    // If TEXT_NODE
-    } else if (node.nodeType === 3) {
+    // Split or create empty TextNodes as needed
+    if (node.nodeType === 3) {
       if (mirrorNode && mirrorNode.nodeType === 3) {
         if (node.data !== mirrorNode.data) {
           nextMirrorNode = splitData(mirrorNode, node.data.length);
@@ -492,9 +487,8 @@ function replaceBindings(fragment, mirror) {
         mirror.insertBefore(mirrorNode, nextMirrorNode);
       }
 
-    // If COMMENT_NODE
+    // Create CommentNodes that IE sometimes ignores when parsing HTML
     } else if (node.nodeType === 8) {
-      // IE sometimes doesn't create CommentNodes that are in HTML
       if (
         !mirrorNode ||
         (mirrorNode.nodeType !== 8) ||
@@ -506,12 +500,36 @@ function replaceBindings(fragment, mirror) {
       }
     }
 
+    // Verify that the nodes are equivalent
+    if (mismatchedNodes(node, mirrorNode)) {
+      console.error('Non-matching', node, mirrorNode, '\nwithin', fragment, mirror);
+      var message = 'Attaching bindings failed, because HTML structure does ' +
+        'not match client-rendering';
+      throw new Error(message);
+    }
+
     // Move bindings on the fragment to the corresponding node on the mirror
     replaceNodeBindings(node, mirrorNode);
 
     mirrorNode = nextMirrorNode;
     node = node.nextSibling;
   } while (node);
+}
+
+function mismatchedNodes(node, mirrorNode) {
+  // Check that nodes are of matching types
+  if (!node || !mirrorNode) return true;
+  var type = node.nodeType;
+  if (type !== mirrorNode.nodeType) return true;
+
+  // Check that elements are of the same element type
+  if (type === 0) {
+    if (node.tagName !== mirrorNode.tagName) return true;
+
+  // Check that TextNodes and CommentNodes have the same content
+  } else if (type === 3 || type === 8) {
+    if (node.data !== mirrorNode.data) return true;
+  }
 }
 
 function replaceNodeBindings(node, mirrorNode) {

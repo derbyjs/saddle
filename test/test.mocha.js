@@ -100,3 +100,47 @@ function testRenderedHtml(render) {
     expect(html).to.eql('<!--Hi--><div>Ho</div>');
   });
 }
+
+describe('replaceBindings', function() {
+
+  function renderAndReplace(template) {
+    var fixture = document.getElementById('fixture');
+    fixture.innerHTML = template.getHtml();
+    var fragment = template.getFragment();
+    saddle.replaceBindings(fragment, fixture);
+    fixture.innerHTML = '';
+  }
+
+  it('traverses a simple, valid DOM tree', function() {
+    var template = new saddle.Template([
+      new saddle.Comment('Hi')
+    , new saddle.Element('ul', null, [
+        new saddle.Element('li', null, [
+          new saddle.Text('Hi')
+        ])
+      ])
+    ]);
+    renderAndReplace(template);
+  });
+
+  it('traverses with comments in a table and select', function() {
+    // IE fails to create comments in certain locations when parsing HTML
+    var template = new saddle.Template([
+      new saddle.Element('table', null, [
+        new saddle.Comment('table comment')
+      , new saddle.Element('tr', null, [
+          new saddle.Element('td')
+        ])
+      ])
+    , new saddle.Element('select', null, [
+        new saddle.Comment('select comment start')
+      , new saddle.Element('option')
+      , new saddle.Comment('select comment inner')
+      , new saddle.Element('option')
+      , new saddle.Comment('select comment end')
+      , new saddle.Comment('select comment end 2')
+      ])
+    ]);
+    renderAndReplace(template);
+  });
+});
