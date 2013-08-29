@@ -344,7 +344,7 @@ describe('Binding updates', function() {
     expect(fixture.innerHTML).equal('<!--Bye-->');
   });
 
-  it('updates Element attribute', function() {
+  it('updates an Element attribute', function() {
     var template = new saddle.Template([
       new saddle.Element('div', new saddle.AttributesMap({
         'class': new saddle.Attribute('message')
@@ -372,32 +372,45 @@ describe('Binding updates', function() {
     expect(node.className).equal('message');
   });
 
-  it('updates Element attribute', function() {
+  it('updates a Block', function() {
     var template = new saddle.Template([
-      new saddle.Element('div', new saddle.AttributesMap({
-        'class': new saddle.Attribute('message')
-      , 'data-greeting': new saddle.DynamicAttribute('greeting')
-      }))
+      new saddle.Block(new saddle.Expression('author'), [
+        new saddle.Element('h3', null, [
+          new saddle.DynamicText(new saddle.Expression('name'))
+        ])
+      ])
     ]);
     var bindings = render(template);
-    expect(bindings.length).equal(1);
-    var node = fixture.firstChild;
-    expect(node.className).equal('message');
-    expect(node.getAttribute('data-greeting')).eql(null);
-    // Set initial value
-    var context = getContext({greeting: 'Yo'});
-    bindings[0].update(context);
-    expect(node.getAttribute('data-greeting')).equal('Yo');
-    // Change value for same attribute
-    var context = getContext({greeting: 'Hi'});
-    bindings[0].update(context);
-    expect(node.getAttribute('data-greeting')).equal('Hi');
-    // Remove value
+    expect(bindings.length).equal(2);
+    var children = getChildren(fixture);
+    expect(children.length).equal(1);
+    expect(children[0].tagName.toLowerCase()).equal('h3');
+    expect(children[0].innerHTML).equal('');
+    // Update entire block context
+    var context = getContext({author: {name: 'John'}});
+    bindings[1].update(context);
+    var children = getChildren(fixture);
+    expect(children.length).equal(1);
+    expect(children[0].tagName.toLowerCase()).equal('h3');
+    expect(children[0].innerHTML).equal('John');
+    // Reset to no data
     var context = getContext();
-    bindings[0].update(context);
-    expect(node.getAttribute('data-greeting')).eql(null);
-    // Dynamic updates don't affect static attribute
-    expect(node.className).equal('message');
+    bindings[1].update(context);
+    var children = getChildren(fixture);
+    expect(children.length).equal(1);
+    expect(children[0].tagName.toLowerCase()).equal('h3');
+    expect(children[0].innerHTML).equal('');
   });
 
 });
+
+// IE <=8 return comments for Node.children
+function getChildren(node) {
+  var nodeChildren = node.children;
+  var children = [];
+  for (var i = 0, len = nodeChildren.length; i < len; i++) {
+    var child = nodeChildren[i];
+    if (child.nodeType === 1) children.push(child);
+  }
+  return children;
+}
