@@ -58,16 +58,16 @@ module.exports = {
 
 , Template: Template
 , Text: Text
-, TextExpression: TextExpression
+, DynamicText: DynamicText
 , Comment: Comment
-, CommentExpression: CommentExpression
+, DynamicComment: DynamicComment
 , Element: Element
 , Block: Block
 , ConditionalBlock: ConditionalBlock
 , EachBlock: EachBlock
 
 , Attribute: Attribute
-, AttributeExpression: AttributeExpression
+, DynamicAttribute: DynamicAttribute
 , AttributesMap: AttributesMap
 
 , Binding: Binding
@@ -110,20 +110,20 @@ Text.prototype.appendTo = function(parent) {
   parent.appendChild(node);
 };
 
-function TextExpression(expression) {
+function DynamicText(expression) {
   this.expression = expression;
 }
-TextExpression.prototype = new Template();
-TextExpression.prototype.getHtml = function(context) {
+DynamicText.prototype = new Template();
+DynamicText.prototype.getHtml = function(context) {
   return context.get(this.expression) || '';
 };
-TextExpression.prototype.appendTo = function(parent, context) {
+DynamicText.prototype.appendTo = function(parent, context) {
   var data = context.get(this.expression) || '';
   var node = document.createTextNode(data);
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, node));
 };
-TextExpression.prototype.update = function(context, binding) {
+DynamicText.prototype.update = function(context, binding) {
   binding.node.data = context.get(this.expression) || '';
 };
 
@@ -139,20 +139,20 @@ Comment.prototype.appendTo = function(parent) {
   parent.appendChild(node);
 };
 
-function CommentExpression(expression) {
+function DynamicComment(expression) {
   this.expression = expression;
 }
-CommentExpression.prototype = new Template();
-CommentExpression.prototype.getHtml = function(context) {
+DynamicComment.prototype = new Template();
+DynamicComment.prototype.getHtml = function(context) {
   return '<!--' + (context.get(this.expression) || '') + '-->';
 };
-CommentExpression.prototype.appendTo = function(parent, context) {
+DynamicComment.prototype.appendTo = function(parent, context) {
   var data = context.get(this.expression) || '';
   var node = document.createComment(data);
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, node));
 };
-CommentExpression.prototype.update = function(context, binding) {
+DynamicComment.prototype.update = function(context, binding) {
   binding.node.data = context.get(this.expression) || '';
 };
 
@@ -163,17 +163,17 @@ Attribute.prototype.getHtml = Attribute.prototype.get = function(context) {
   return this.data;
 };
 
-function AttributeExpression(expression) {
+function DynamicAttribute(expression) {
   this.expression = expression;
 }
-AttributeExpression.prototype.getHtml = function(context) {
+DynamicAttribute.prototype.getHtml = function(context) {
   return context.get(this.expression);
 };
-AttributeExpression.prototype.get = function(context, element, name) {
+DynamicAttribute.prototype.get = function(context, element, name) {
   context.onAdd(new AttributeBinding(this, element, name));
   return context.get(this.expression);
 };
-AttributeExpression.prototype.update = function(context, binding) {
+DynamicAttribute.prototype.update = function(context, binding) {
   var value = context.get(this.expression);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
@@ -609,9 +609,17 @@ function replaceNodeBindings(node, mirrorNode) {
 }
 
 
-// Expression & Context types should be implemented for the particular
-// semantics of a templating language
-
+// Expression classes should be implemented specific to the containing
+// framework's data model and expression semantics. They are created when
+// templates are instantiated, so any string 
+// These are an example set of
+// expresions, but a framework can have an arbitrary number of expression types.
+// 
+// The required interface methods are:
+//   Context::onAdd(binding)
+//   Context::onRemove(binding)
+//   Context::child(expression)
+//   Context::get(expression)
 function Expression(source) {
   this.source = source;
 }
@@ -619,7 +627,7 @@ Expression.prototype.toString = function() {
   return this.source;
 };
 Expression.prototype.get = function(context) {
-  return context.getProperty(this.source);
+  return context._getProperty(this.source);
 };
 
 function IfExpression(source) {
@@ -647,14 +655,17 @@ EachExpression.prototype.get = function(context) {
   return this.expression.get(context);
 };
 
-function ContextMeta(options) {
-  this.onAdd = options.onAdd || noop;
-  this.onRemove = options.onRemove || noop;
-}
-
-// Contexts should be user defined.
-//
-// The only mandatory functions in the context class are .child() and .get().
+// Context classes should be implemented specific to the containing framework's
+// data model and expression semantics. Context objects are created at render
+// and binding update time, so they should be fast and minimally complex.
+// Framework specific work, such as parsing template language specific syntax,
+// should be done in Expression object instantiation whenever possible.
+// 
+// The required interface methods are:
+//   Context::onAdd(binding)
+//   Context::onRemove(binding)
+//   Context::child(expression)
+//   Context::get(expression)
 function Context(meta, data, parent) {
   this.meta = meta;
   this.data = data;
@@ -666,27 +677,24 @@ Context.prototype.onAdd = function(binding) {
 Context.prototype.onRemove = function(binding) {
   this.meta.onRemove(binding);
 };
-Context.prototype.get = function(expression) {
-  return (expression == null) ? this.data :
-    (expression instanceof Expression) ? expression.get(this) :
-    this.getProperty(expression);
-};
-Context.prototype.getProperty = function(property) {
-  return (this.data && this.data.hasOwnProperty(property)) ?
-    this.data[property] :
-    this.parent && this.parent.getProperty(property);
-};
 Context.prototype.child = function(expression) {
   var data = this.get(expression);
   return new Context(this.meta, data, this);
 };
-
-var setNodeProperty = function(node, key, value) {
-  return node[key] = value;
+Context.prototype.get = function(expression) {
+  return (expression == null) ? this.data :
+    (expression instanceof Expression) ? expression.get(this) :
+    this._getProperty(expression);
 };
-var getNodeProperty = function(node, key) {
-  return node[key];
+Context.prototype._getProperty = function(property) {
+  return (this.data && this.data.hasOwnProperty(property)) ?
+    this.data[property] :
+    this.parent && this.parent._getProperty(property);
 };
+function ContextMeta(options) {
+  this.onAdd = options.onAdd || noop;
+  this.onRemove = options.onRemove || noop;
+}
 
 
 //// Utility functions ////
@@ -717,41 +725,19 @@ function splitData(node, index) {
   return newNode;
 }
 
-function ObjectMapKeys() {}
-function ObjectMapValues() {}
-function ObjectMap() {
-  this.count = 0;
-  this.keys = new ObjectMapKeys();
-  this.values = new ObjectMapValues();
+// These functions are defined so that they can be overriden in IE
+function setNodeProperty(node, key, value) {
+  return node[key] = value;
 }
-ObjectMap.prototype.keyId = function(key) {
-  var keys = this.keys;
-  for (var id in keys) {
-    if (keys[id] === key) return id;
-  }
-};
-ObjectMap.prototype.add = function(key, value) {
-  var id = (++this.count).toString();
-  this.keys[id] = key;
-  this.values[id] = value;
-};
-ObjectMap.prototype.remove = function(key) {
-  var id = this.keyId(key);
-  if (!id) return;
-  delete this.keys[id];
-  delete this.values[id];
-};
-ObjectMap.prototype.get = function(key) {
-  var id = this.keyId(key);
-  return id && this.values[id];
-};
-function NodeProperties() {}
+function getNodeProperty(node, key) {
+  return node[key];
+}
 
 (function() {
   // Don't try to shim in Node.js environment
   if (typeof document === 'undefined') return;
 
-  // TODO: Investigate whether input name attribute works in IE6-7
+  // TODO: Investigate whether input name attribute works in IE 6-7
   // http://webbugtrack.blogspot.com/2007/10/bug-235-createelement-is-broken-in-ie.html
 
   // In IE, input.defaultValue doesn't work correctly, so use input.value,
@@ -767,7 +753,7 @@ function NodeProperties() {}
   }
 
   try {
-    // TEXT_NODEs are not expando prior to IE9
+    // TEXT_NODEs are not expando in IE <=8
     document.createTextNode('').$try = 0;
   } catch (err) {
     setNodeProperty = function(node, key, value) {
@@ -795,4 +781,35 @@ function NodeProperties() {}
       return node[key];
     };
   }
+
+  function ObjectMapKeys() {}
+  function ObjectMapValues() {}
+  function ObjectMap() {
+    this.count = 0;
+    this.keys = new ObjectMapKeys();
+    this.values = new ObjectMapValues();
+  }
+  ObjectMap.prototype.keyId = function(key) {
+    var keys = this.keys;
+    for (var id in keys) {
+      if (keys[id] === key) return id;
+    }
+  };
+  ObjectMap.prototype.add = function(key, value) {
+    var id = (++this.count).toString();
+    this.keys[id] = key;
+    this.values[id] = value;
+  };
+  ObjectMap.prototype.remove = function(key) {
+    var id = this.keyId(key);
+    if (!id) return;
+    delete this.keys[id];
+    delete this.values[id];
+  };
+  ObjectMap.prototype.get = function(key) {
+    var id = this.keyId(key);
+    return id && this.values[id];
+  };
+
+  function NodeProperties() {}
 })();

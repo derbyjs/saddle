@@ -21,12 +21,12 @@ var template = new Block(_this, [
   }), [
     new Element('h1', null, [
       new Text('By ')
-    , new TextExpression(new Expression('author'))
+    , new DynamicText(new Expression('author'))
     ])
   , new Element('div', new AttributesMap({
       'class': new Attribute('body')
     }), [
-      new TextExpression(new Expression('body'))
+      new DynamicText(new Expression('body'))
     ])
   , new Text('\n')
   , new Comment('Go, go comment node!')
@@ -45,13 +45,13 @@ var template = new Block(_this, [
       new Element('h2', null, [
         new Text('By ')
       , new Block('nonsense', [
-          new TextExpression(new Expression('author'))
+          new DynamicText(new Expression('author'))
         ])
       ])
     , new Element('div', new AttributesMap({
         'class': new Attribute('body')
       }), [
-        new TextExpression(new Expression('body'))
+        new DynamicText(new Expression('body'))
       ])
     ], [
       new Text('Lamers')

@@ -307,7 +307,7 @@ describe('Binding updates', function() {
 
   it('updates a single TextNode', function() {
     var template = new saddle.Template([
-      new saddle.TextExpression(new saddle.Expression('text'))
+      new saddle.DynamicText(new saddle.Expression('text'))
     ]);
     var bindings = render(template);
     expect(bindings.length).equal(1);
@@ -319,8 +319,8 @@ describe('Binding updates', function() {
 
   it('updates sibling TextNodes', function() {
     var template = new saddle.Template([
-      new saddle.TextExpression(new saddle.Expression('first'))
-    , new saddle.TextExpression(new saddle.Expression('second'))
+      new saddle.DynamicText(new saddle.Expression('first'))
+    , new saddle.DynamicText(new saddle.Expression('second'))
     ]);
     var bindings = render(template, {second: 2});
     expect(bindings.length).equal(2);
@@ -334,7 +334,7 @@ describe('Binding updates', function() {
 
   it('updates a CommentNode', function() {
     var template = new saddle.Template([
-      new saddle.CommentExpression(new saddle.Expression('comment'))
+      new saddle.DynamicComment(new saddle.Expression('comment'))
     ]);
     var bindings = render(template, {comment: 'Hi'});
     expect(bindings.length).equal(1);
@@ -348,7 +348,35 @@ describe('Binding updates', function() {
     var template = new saddle.Template([
       new saddle.Element('div', new saddle.AttributesMap({
         'class': new saddle.Attribute('message')
-      , 'data-greeting': new saddle.AttributeExpression('greeting')
+      , 'data-greeting': new saddle.DynamicAttribute('greeting')
+      }))
+    ]);
+    var bindings = render(template);
+    expect(bindings.length).equal(1);
+    var node = fixture.firstChild;
+    expect(node.className).equal('message');
+    expect(node.getAttribute('data-greeting')).eql(null);
+    // Set initial value
+    var context = getContext({greeting: 'Yo'});
+    bindings[0].update(context);
+    expect(node.getAttribute('data-greeting')).equal('Yo');
+    // Change value for same attribute
+    var context = getContext({greeting: 'Hi'});
+    bindings[0].update(context);
+    expect(node.getAttribute('data-greeting')).equal('Hi');
+    // Remove value
+    var context = getContext();
+    bindings[0].update(context);
+    expect(node.getAttribute('data-greeting')).eql(null);
+    // Dynamic updates don't affect static attribute
+    expect(node.className).equal('message');
+  });
+
+  it('updates Element attribute', function() {
+    var template = new saddle.Template([
+      new saddle.Element('div', new saddle.AttributesMap({
+        'class': new saddle.Attribute('message')
+      , 'data-greeting': new saddle.DynamicAttribute('greeting')
       }))
     ]);
     var bindings = render(template);
