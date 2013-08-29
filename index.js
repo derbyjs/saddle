@@ -68,7 +68,6 @@ module.exports = {
 
 , Attribute: Attribute
 , AttributeExpression: AttributeExpression
-, PropertyExpression: PropertyExpression
 , AttributesMap: AttributesMap
 
 , Binding: Binding
@@ -186,16 +185,6 @@ AttributeExpression.prototype.update = function(context, binding) {
   } else {
     binding.element.setAttribute(binding.name, value);
   }
-};
-
-function PropertyExpression(expression, property) {
-  this.expression = expression;
-  this.property = property;
-}
-PropertyExpression.prototype = new AttributeExpression();
-PropertyExpression.prototype.update = function(context, binding) {
-  var value = context.get(this.expression);
-  binding.element[this.property] = (value == null) ? '' : value;
 };
 
 function AttributesMap(object) {
