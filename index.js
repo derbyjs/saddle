@@ -1,12 +1,7 @@
 // https://github.com/jquery/jquery/blob/1.x-master/src/attributes/prop.js
 // https://github.com/jquery/jquery/blob/master/src/attributes/prop.js
 // http://webbugtrack.blogspot.com/2007/08/bug-242-setattribute-doesnt-always-work.html
-function AttributeMap(map) {
-  for (var key in map) {
-    this[key] = map[key];
-  }
-}
-var ATTRIBUTE_MAP = new AttributeMap({
+var UPDATE_PROPERTIES = {
   checked: 'checked'
 , disabled: 'disabled'
 , selected: 'selected'
@@ -27,16 +22,17 @@ var ATTRIBUTE_MAP = new AttributeMap({
 , enctype: 'encoding'
 , id: 'id'
 , title: 'title'
-});
+};
 // input.defaultChecked and input.defaultValue affect the attribute, so we want
 // to use these for initial dynamic rendering. For binding updates,
 // input.checked and input.value are modified.
-var CREATE_ATTRIBUTE_MAP = new AttributeMap(ATTRIBUTE_MAP);
-CREATE_ATTRIBUTE_MAP.checked = 'defaultChecked';
-CREATE_ATTRIBUTE_MAP.value = 'defaultValue';
+var CREATE_PROPERTIES = {};
+mergeInto(UPDATE_PROPERTIES, CREATE_PROPERTIES);
+CREATE_PROPERTIES.checked = 'defaultChecked';
+CREATE_PROPERTIES.value = 'defaultValue';
 
 // http://www.w3.org/html/wg/drafts/html/master/syntax.html#void-elements
-var VOID_ELEMENT_MAP = {
+var VOID_ELEMENTS = {
   area: true
 , base: true
 , br: true
@@ -56,9 +52,9 @@ var VOID_ELEMENT_MAP = {
 };
 
 module.exports = {
-  ATTRIBUTE_MAP: ATTRIBUTE_MAP
-, CREATE_ATTRIBUTE_MAP: CREATE_ATTRIBUTE_MAP
-, VOID_ELEMENT_MAP: VOID_ELEMENT_MAP
+  CREATE_PROPERTIES: CREATE_PROPERTIES
+, UPDATE_PROPERTIES: UPDATE_PROPERTIES
+, VOID_ELEMENTS: VOID_ELEMENTS
 
 , Template: Template
 , Text: Text
@@ -180,7 +176,7 @@ AttributeExpression.prototype.get = function(context, element, name) {
 };
 AttributeExpression.prototype.update = function(context, binding) {
   var value = context.get(this.expression);
-  var propertyName = ATTRIBUTE_MAP[binding.name];
+  var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     binding.element[propertyName] = value;
   } else if (value === false || value == null) {
@@ -203,17 +199,14 @@ PropertyExpression.prototype.update = function(context, binding) {
 };
 
 function AttributesMap(object) {
-  if (!object) return;
-  for (var key in object) {
-    this[key] = object[key];
-  }
+  if (object) mergeInto(object, this);
 }
 
 function Element(tag, attributes, contents) {
   this.tag = tag;
   this.attributes = attributes;
   this.contents = contents;
-  this.isVoid = VOID_ELEMENT_MAP[tag.toLowerCase()];
+  this.isVoid = VOID_ELEMENTS[tag.toLowerCase()];
 }
 Element.prototype = new Template();
 Element.prototype.getHtml = function(context) {
@@ -238,7 +231,7 @@ Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tag);
   for (var key in this.attributes) {
     var value = this.attributes[key].get(context, element, key);
-    var propertyName = CREATE_ATTRIBUTE_MAP[key];
+    var propertyName = CREATE_PROPERTIES[key];
     if (propertyName) {
       element[propertyName] = value;
     } else if (value === true) {
@@ -706,7 +699,16 @@ var getNodeProperty = function(node, key) {
   return node[key];
 };
 
+
+//// Utility functions ////
+
 function noop() {}
+
+function mergeInto(from, to) {
+  for (var key in from) {
+    to[key] = from[key];
+  }
+}
 
 
 //// IE shims & workarounds ////
@@ -772,7 +774,7 @@ function NodeProperties() {}
   var input = document.createElement('input');
   input.defaultValue = 'x';
   if (input.value !== 'x') {
-    CREATE_ATTRIBUTE_MAP.value = 'value';
+    CREATE_PROPERTIES.value = 'value';
   }
 
   try {
