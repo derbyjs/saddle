@@ -782,6 +782,9 @@ function NodeProperties() {}
   // Don't try to shim in Node.js environment
   if (typeof document === 'undefined') return;
 
+  // TODO: Investigate whether input name attribute works in IE6-7
+  // http://webbugtrack.blogspot.com/2007/10/bug-235-createelement-is-broken-in-ie.html
+
   // In IE, input.defaultValue doesn't work correctly, so use input.value,
   // which mistakenly but conveniently sets both the value property and attribute.
   // 
