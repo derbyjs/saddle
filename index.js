@@ -1,3 +1,6 @@
+// UPDATE_PROPERTIES map HTML attribute names to an Element DOM property that
+// should be used for setting on bindings updates instead of setAttribute.
+//
 // https://github.com/jquery/jquery/blob/1.x-master/src/attributes/prop.js
 // https://github.com/jquery/jquery/blob/master/src/attributes/prop.js
 // http://webbugtrack.blogspot.com/2007/08/bug-242-setattribute-doesnt-always-work.html
@@ -23,6 +26,8 @@ var UPDATE_PROPERTIES = {
 , id: 'id'
 , title: 'title'
 };
+// CREATE_PROPERTIES map HTML attribute names to an Element DOM property that
+// should be used for setting on Element rendering instead of setAttribute.
 // input.defaultChecked and input.defaultValue affect the attribute, so we want
 // to use these for initial dynamic rendering. For binding updates,
 // input.checked and input.value are modified.
@@ -514,6 +519,9 @@ RangeBinding.prototype.move = function(context, from, to, howMany) {
   this.template.move(context, this, from, to, howMany);
 };
 
+
+//// HTML page initialization ////
+
 function replaceBindings(fragment, mirror) {
   var node = fragment.firstChild;
   var mirrorNode = mirror.firstChild;
@@ -609,17 +617,30 @@ function replaceNodeBindings(node, mirrorNode) {
 }
 
 
+//// Utility functions ////
+
+function noop() {}
+
+function mergeInto(from, to) {
+  for (var key in from) {
+    to[key] = from[key];
+  }
+}
+
+
+//// Example framework-specific classes ////
+
 // Expression classes should be implemented specific to the containing
 // framework's data model and expression semantics. They are created when
-// templates are instantiated, so any string 
-// These are an example set of
-// expresions, but a framework can have an arbitrary number of expression types.
-// 
+// templates are instantiated, so any source string parsing that can be done
+// once should be performed by the Expression constructor. This is an example
+// set of expresions, but a framework can have an arbitrary number of
+// expression types.
+//
 // The required interface methods are:
-//   Context::onAdd(binding)
-//   Context::onRemove(binding)
-//   Context::child(expression)
-//   Context::get(expression)
+//   Expression(source)
+//   Expression::toString()
+//   Expression::get(context)
 function Expression(source) {
   this.source = source;
 }
@@ -660,7 +681,7 @@ EachExpression.prototype.get = function(context) {
 // and binding update time, so they should be fast and minimally complex.
 // Framework specific work, such as parsing template language specific syntax,
 // should be done in Expression object instantiation whenever possible.
-// 
+//
 // The required interface methods are:
 //   Context::onAdd(binding)
 //   Context::onRemove(binding)
@@ -694,17 +715,6 @@ Context.prototype._getProperty = function(property) {
 function ContextMeta(options) {
   this.onAdd = options.onAdd || noop;
   this.onRemove = options.onRemove || noop;
-}
-
-
-//// Utility functions ////
-
-function noop() {}
-
-function mergeInto(from, to) {
-  for (var key in from) {
-    to[key] = from[key];
-  }
 }
 
 
