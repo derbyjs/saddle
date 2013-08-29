@@ -1,11 +1,11 @@
-describe('HTML Rendering', function() {
+describe('HTML rendering', function() {
   testRenderedHtml(function test(options) {
     var html = options.template.getHtml();
     expect(html).equal(options.html);
   });
 });
 
-describe('Fragment Rendering', function() {
+describe('Fragment rendering', function() {
   testRenderedHtml(function test(options) {
     var fragment = options.template.getFragment();
     options.fragment(fragment);
@@ -276,6 +276,45 @@ describe('replaceBindings', function() {
     expect(function() {
       renderAndReplace(template)
     }).to.throwException();
+  });
+
+});
+
+describe('Binding updates', function() {
+
+  var fixture = document.getElementById('fixture');
+  after(function() {
+    fixture.innerHTML = '';
+  });
+
+  function getContext(data, bindings) {
+    var contextMeta = new saddle.ContextMeta({
+      onAdd: function(binding) {
+        bindings && bindings.push(binding);
+      }
+    });
+    return new saddle.Context(contextMeta, data);
+  }
+
+  function render(template, data) {
+    fixture.innerHTML = '';
+    var bindings = [];
+    var context = getContext(data, bindings);
+    var fragment = template.getFragment(context);
+    fixture.appendChild(fragment);
+    return bindings;
+  }
+
+  it('updates a single TextNode', function() {
+    var template = new saddle.Template([
+      new saddle.TextExpression(new saddle.Expression('text'))
+    ]);
+    var bindings = render(template);
+    expect(bindings.length).equal(1);
+    expect(fixture.innerHTML).equal('');
+    var context = getContext({text: 'Yo'});
+    bindings[0].update(context);
+    expect(fixture.innerHTML).equal('Yo');
   });
 
 });
