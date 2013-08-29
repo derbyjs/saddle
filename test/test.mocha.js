@@ -243,7 +243,8 @@ describe('replaceBindings', function() {
       new saddle.Element('table', null, [
         new saddle.Comment('table comment')
       , new saddle.Element('tbody', null, [
-          new saddle.Element('tr', null, [
+          new saddle.Comment('tbody comment')
+        , new saddle.Element('tr', null, [
             new saddle.Element('td')
           ])
         ])
