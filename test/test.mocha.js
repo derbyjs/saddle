@@ -213,12 +213,16 @@ function testRenderedHtml(test) {
 
 describe('replaceBindings', function() {
 
+  after(function() {
+    var fixture = document.getElementById('fixture');
+    fixture.innerHTML = '';
+  });
+
   function renderAndReplace(template) {
     var fixture = document.getElementById('fixture');
     fixture.innerHTML = template.getHtml();
     var fragment = template.getFragment();
     saddle.replaceBindings(fragment, fixture);
-    fixture.innerHTML = '';
   }
 
   it('traverses a simple, valid DOM tree', function() {
@@ -238,8 +242,10 @@ describe('replaceBindings', function() {
     var template = new saddle.Template([
       new saddle.Element('table', null, [
         new saddle.Comment('table comment')
-      , new saddle.Element('tr', null, [
-          new saddle.Element('td')
+      , new saddle.Element('tbody', null, [
+          new saddle.Element('tr', null, [
+            new saddle.Element('td')
+          ])
         ])
       ])
     , new saddle.Element('select', null, [
@@ -253,4 +259,22 @@ describe('replaceBindings', function() {
     ]);
     renderAndReplace(template);
   });
+
+  it('throws when fragment does not match HTML', function() {
+    // This template is invalid HTML, and when it is parsed it will produce
+    // a different tree structure than when the nodes are created one-by-one
+    var template = new saddle.Template([
+      new saddle.Element('table', null, [
+        new saddle.Element('div', null, [
+          new saddle.Element('td', null, [
+            new saddle.Text('Hi')
+          ])
+        ])
+      ])
+    ]);
+    expect(function() {
+      renderAndReplace(template)
+    }).to.throwException();
+  });
+
 });

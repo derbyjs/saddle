@@ -569,14 +569,18 @@ function replaceBindings(fragment, mirror) {
 
     // Verify that the nodes are equivalent
     if (mismatchedNodes(node, mirrorNode)) {
-      console.error('Non-matching', node, mirrorNode, '\nwithin', fragment, mirror);
-      var message = 'Attaching bindings failed, because HTML structure does ' +
-        'not match client-rendering';
-      throw new Error(message);
+      throw new Error('Attaching bindings failed, because HTML structure ' +
+        'does not match client rendering'
+      );
     }
 
     // Move bindings on the fragment to the corresponding node on the mirror
     replaceNodeBindings(node, mirrorNode);
+
+    // Recursively traverse within Elements
+    if (node.nodeType === 1 && node.hasChildNodes()) {
+      replaceBindings(node, mirrorNode);
+    }
 
     mirrorNode = nextMirrorNode;
     node = node.nextSibling;
@@ -590,7 +594,7 @@ function mismatchedNodes(node, mirrorNode) {
   if (type !== mirrorNode.nodeType) return true;
 
   // Check that elements are of the same element type
-  if (type === 0) {
+  if (type === 1) {
     if (node.tagName !== mirrorNode.tagName) return true;
 
   // Check that TextNodes and CommentNodes have the same content
