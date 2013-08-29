@@ -37,11 +37,11 @@ function testRenderedHtml(test) {
 
   it('renders a div with literal attributes', function() {
     test({
-      template: new saddle.Element('div', {
+      template: new saddle.Element('div', new saddle.AttributesMap({
         id: new saddle.Attribute('page')
       , 'data-x': new saddle.Attribute('24')
       , 'class': new saddle.Attribute('content fit')
-      })
+      }))
     , html: '<div id="page" data-x="24" class="content fit"></div>'
     , fragment: function(fragment) {
         expect(fragment.childNodes.length).equal(1);
@@ -55,9 +55,9 @@ function testRenderedHtml(test) {
 
   it('renders a true boolean attribute', function() {
     test({
-      template: new saddle.Element('input', {
+      template: new saddle.Element('input', new saddle.AttributesMap({
         autofocus: new saddle.Attribute(true)
-      })
+      }))
     , html: '<input autofocus>'
     , fragment: function(fragment) {
         expect(fragment.childNodes.length).equal(1);
@@ -69,9 +69,9 @@ function testRenderedHtml(test) {
 
   it('renders a false boolean attribute', function() {
     test({
-      template: new saddle.Element('input', {
+      template: new saddle.Element('input', new saddle.AttributesMap({
         autofocus: new saddle.Attribute(false)
-      })
+      }))
     , html: '<input>'
     , fragment: function(fragment) {
         expect(fragment.childNodes.length).equal(1);
@@ -174,9 +174,9 @@ function testRenderedHtml(test) {
 
   it('renders <input> value attribute', function() {
     test({
-      template: new saddle.Element('input', {
+      template: new saddle.Element('input', new saddle.AttributesMap({
         value: new saddle.Attribute('hello')
-      })
+      }))
     , html: '<input value="hello">'
     , fragment: function(fragment) {
         expect(fragment.childNodes[0].value).equal('hello');
@@ -187,10 +187,10 @@ function testRenderedHtml(test) {
 
   it('renders <input> checked attribute: true', function() {
     test({
-      template: new saddle.Element('input', {
+      template: new saddle.Element('input', new saddle.AttributesMap({
         type: new saddle.Attribute('radio')
       , checked: new saddle.Attribute(true)
-      })
+      }))
     , html: '<input type="radio" checked>'
     , fragment: function(fragment) {
         expect(fragment.childNodes[0].checked).equal(true);
@@ -199,10 +199,10 @@ function testRenderedHtml(test) {
   });
   it('renders <input> checked attribute: false', function() {
     test({
-      template: new saddle.Element('input', {
+      template: new saddle.Element('input', new saddle.AttributesMap({
         type: new saddle.Attribute('radio')
       , checked: new saddle.Attribute(false)
-      })
+      }))
     , html: '<input type="radio">'
     , fragment: function(fragment) {
         expect(fragment.childNodes[0].checked).equal(false);
@@ -315,6 +315,61 @@ describe('Binding updates', function() {
     var context = getContext({text: 'Yo'});
     bindings[0].update(context);
     expect(fixture.innerHTML).equal('Yo');
+  });
+
+  it('updates sibling TextNodes', function() {
+    var template = new saddle.Template([
+      new saddle.TextExpression(new saddle.Expression('first'))
+    , new saddle.TextExpression(new saddle.Expression('second'))
+    ]);
+    var bindings = render(template, {second: 2});
+    expect(bindings.length).equal(2);
+    expect(fixture.innerHTML).equal('2');
+    var context = getContext({first: 'one', second: 'two'});
+    bindings[0].update(context);
+    expect(fixture.innerHTML).equal('one2');
+    bindings[1].update(context);
+    expect(fixture.innerHTML).equal('onetwo');
+  });
+
+  it('updates a CommentNode', function() {
+    var template = new saddle.Template([
+      new saddle.CommentExpression(new saddle.Expression('comment'))
+    ]);
+    var bindings = render(template, {comment: 'Hi'});
+    expect(bindings.length).equal(1);
+    expect(fixture.innerHTML).equal('<!--Hi-->');
+    var context = getContext({comment: 'Bye'});
+    bindings[0].update(context);
+    expect(fixture.innerHTML).equal('<!--Bye-->');
+  });
+
+  it('updates Element attribute', function() {
+    var template = new saddle.Template([
+      new saddle.Element('div', new saddle.AttributesMap({
+        'class': new saddle.Attribute('message')
+      , 'data-greeting': new saddle.AttributeExpression('greeting')
+      }))
+    ]);
+    var bindings = render(template);
+    expect(bindings.length).equal(1);
+    var node = fixture.firstChild;
+    expect(node.className).equal('message');
+    expect(node.getAttribute('data-greeting')).eql(null);
+    // Set initial value
+    var context = getContext({greeting: 'Yo'});
+    bindings[0].update(context);
+    expect(node.getAttribute('data-greeting')).equal('Yo');
+    // Change value for same attribute
+    var context = getContext({greeting: 'Hi'});
+    bindings[0].update(context);
+    expect(node.getAttribute('data-greeting')).equal('Hi');
+    // Remove value
+    var context = getContext();
+    bindings[0].update(context);
+    expect(node.getAttribute('data-greeting')).eql(null);
+    // Dynamic updates don't affect static attribute
+    expect(node.className).equal('message');
   });
 
 });
