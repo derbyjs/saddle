@@ -10,7 +10,10 @@ var module = {};
 <script src="../index.js"></script>
 <script>
 
-var _this = new ThisExpression();
+var _this = new Expression();
+_this.toString = function() {
+  return 'this';
+};
 
 var template = new Block(_this, [
   new Element('div', new AttributesMap({
@@ -78,7 +81,7 @@ var meta = new ContextMeta({
 });
 var context = new Context(meta, {
   author: 'Alan Johnson'
-, body: 'I Love Handlebars'
+, body: 'I Love Saddle'
 , comments: [{
     author: 'Parker Blue'
   , body: 'Me too!'

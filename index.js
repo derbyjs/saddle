@@ -82,9 +82,7 @@ module.exports = {
 , replaceBindings: replaceBindings
 
 , Expression: Expression
-, ThisExpression: ThisExpression
 , IfExpression: IfExpression
-, UnlessExpression: UnlessExpression
 , EachExpression: EachExpression
 , ContextMeta: ContextMeta
 , Context: Context
@@ -642,14 +640,6 @@ Expression.prototype.get = function(context) {
   return context.getProperty(this.source);
 };
 
-function ThisExpression() {}
-ThisExpression.prototype.toString = function() {
-  return 'this';
-};
-ThisExpression.prototype.get = function(context) {
-  return context.get();
-};
-
 function IfExpression(source) {
   this.source = source;
   this.expression = new Expression(source);
@@ -661,18 +651,6 @@ IfExpression.prototype.toString = function() {
 IfExpression.prototype.get = function(context) {
   var value = this.expression.get(context);
   return (Array.isArray(value) && value.length === 0) ? null : value;
-};
-
-function UnlessExpression(source) {
-  this.source = source;
-  this.expression = new IfExpression(source);
-}
-UnlessExpression.prototype = new Expression;
-UnlessExpression.prototype.toString = function() {
-  return 'unless ' + this.source;
-};
-UnlessExpression.prototype.get = function(context) {
-  return !this.expression.get(context);
 };
 
 function EachExpression(source) {
