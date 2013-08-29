@@ -1,103 +1,213 @@
 describe('HTML Rendering', function() {
-  testRenderedHtml(function render(template) {
-    return template.getHtml();
+  testRenderedHtml(function test(options) {
+    var html = options.template.getHtml();
+    expect(html).equal(options.html);
   });
 });
 
 describe('Fragment Rendering', function() {
-  testRenderedHtml(function render(template) {
-    var fragment = template.getFragment();
-    var div = document.createElement('div');
-    div.appendChild(fragment);
-    return div.innerHTML;
+  testRenderedHtml(function test(options) {
+    var fragment = options.template.getFragment();
+    options.fragment(fragment);
   });
 });
 
-function testRenderedHtml(render) {
+function testRenderedHtml(test) {
   it('renders an empty div', function() {
-    var template = new saddle.Element('div');
-    var html = render(template);
-    expect(html).to.eql('<div></div>');
-  });
-
-  it('renders a div with literal attributes', function() {
-    var template = new saddle.Element('div', {
-      id: new saddle.Attribute('page')
-    , 'class': new saddle.Attribute('content fit')
+    test({
+      template: new saddle.Element('div')
+    , html: '<div></div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+      }
     });
-    var html = render(template);
-    expect(html).to.eql('<div id="page" class="content fit"></div>');
   });
 
   it('renders a void element', function() {
-    var template = new saddle.Element('input', {
-      value: new saddle.Attribute('hello')
-    }, null, true);
-    var html = render(template);
-    expect(html).to.eql('<input value="hello">');
+    test({
+      template: new saddle.Element('br')
+    , html: '<br>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('br');
+      }
+    });
+  });
+
+  it('renders a div with literal attributes', function() {
+    test({
+      template: new saddle.Element('div', {
+        id: new saddle.Attribute('page')
+      , 'data-x': new saddle.Attribute('24')
+      , 'class': new saddle.Attribute('content fit')
+      })
+    , html: '<div id="page" data-x="24" class="content fit"></div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+        expect(fragment.childNodes[0].id).equal('page');
+        expect(fragment.childNodes[0].className).equal('content fit');
+        expect(fragment.childNodes[0].getAttribute('data-x')).equal('24');
+      }
+    });
   });
 
   it('renders a true boolean attribute', function() {
-    var template = new saddle.Element('input', {
-      type: new saddle.Attribute('radio')
-    , checked: new saddle.Attribute(true)
-    }, null, true);
-    var html = render(template);
-    // In the case of getFragment, true boolean attributes must set a value
-    html = html.replace('checked="checked"', 'checked');
-    expect(html).to.eql('<input type="radio" checked>');
+    test({
+      template: new saddle.Element('input', {
+        autofocus: new saddle.Attribute(true)
+      })
+    , html: '<input autofocus>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('input');
+        expect(fragment.childNodes[0].getAttribute('autofocus')).not.eql(null);
+      }
+    });
   });
 
   it('renders a false boolean attribute', function() {
-    var template = new saddle.Element('input', {
-      type: new saddle.Attribute('radio')
-    , checked: new saddle.Attribute(false)
-    }, null, true);
-    var html = render(template);
-    expect(html).to.eql('<input type="radio">');
+    test({
+      template: new saddle.Element('input', {
+        autofocus: new saddle.Attribute(false)
+      })
+    , html: '<input>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('input');
+        expect(fragment.childNodes[0].getAttribute('autofocus')).eql(null);
+      }
+    });
   });
 
   it('renders nested elements', function() {
-    var template = new saddle.Element('div', null, [
-      new saddle.Element('div', null, [
-        new saddle.Element('span')
-      , new saddle.Element('span')
+    test({
+      template: new saddle.Element('div', null, [
+        new saddle.Element('div', null, [
+          new saddle.Element('span')
+        , new saddle.Element('span')
+        ])
       ])
-    ]);
-    var html = render(template);
-    expect(html).to.eql('<div><div><span></span><span></span></div></div>');
+    , html: '<div><div><span></span><span></span></div></div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        var node = fragment.childNodes[0];
+        expect(node.tagName.toLowerCase()).equal('div');
+        expect(node.childNodes.length).equal(1);
+        var node = node.childNodes[0];
+        expect(node.tagName.toLowerCase()).equal('div');
+        expect(node.childNodes.length).equal(2);
+        expect(node.childNodes[0].tagName.toLowerCase()).equal('span');
+        expect(node.childNodes[0].childNodes.length).equal(0);
+        expect(node.childNodes[1].tagName.toLowerCase()).equal('span');
+        expect(node.childNodes[1].childNodes.length).equal(0);
+      }
+    });
   });
 
   it('renders a text node', function() {
-    var template = new saddle.Text('Hi');
-    var html = render(template);
-    expect(html).to.eql('Hi');
+    test({
+      template: new saddle.Text('Hi')
+    , html: 'Hi'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].nodeType).equal(3);
+        expect(fragment.childNodes[0].data).equal('Hi');
+      }
+    });
   });
 
   it('renders text nodes in an element', function() {
-    var template = new saddle.Element('div', null, [
-      new saddle.Text('Hello,')
-    , new saddle.Text(' world.')
-    ]);
-    var html = render(template);
-    expect(html).to.eql('<div>Hello, world.</div>');
+    test({
+      template: new saddle.Element('div', null, [
+        new saddle.Text('Hello, ')
+      , new saddle.Text('world.')
+      ])
+    , html: '<div>Hello, world.</div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        var node = fragment.childNodes[0];
+        expect(node.tagName.toLowerCase()).equal('div');
+        expect(node.childNodes.length).equal(2);
+        expect(node.childNodes[0].nodeType).equal(3);
+        expect(node.childNodes[0].data).equal('Hello, ');
+        expect(node.childNodes[1].nodeType).equal(3);
+        expect(node.childNodes[1].data).equal('world.');
+      }
+    });
   });
 
   it('renders a comment', function() {
-    var template = new saddle.Comment('Hi');
-    var html = render(template);
-    expect(html).to.eql('<!--Hi-->');
+    test({
+      template: new saddle.Comment('Hi')
+    , html: '<!--Hi-->'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].nodeType).equal(8);
+        expect(fragment.childNodes[0].data).equal('Hi');
+      }
+    });
   });
 
   it('renders a template', function() {
-    var template = new saddle.Template([
-      new saddle.Comment('Hi')
-    , new saddle.Element('div', null, [
-        new saddle.Text('Ho')
+    test({
+      template: new saddle.Template([
+        new saddle.Comment('Hi')
+      , new saddle.Element('div', null, [
+          new saddle.Text('Ho')
+        ])
       ])
-    ]);
-    var html = render(template);
-    expect(html).to.eql('<!--Hi--><div>Ho</div>');
+    , html: '<!--Hi--><div>Ho</div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(2);
+        expect(fragment.childNodes[0].nodeType).equal(8);
+        expect(fragment.childNodes[0].data).equal('Hi');
+        var node = fragment.childNodes[1];
+        expect(node.tagName.toLowerCase()).equal('div');
+        expect(node.childNodes.length).equal(1);
+        expect(node.childNodes[0].nodeType).equal(3);
+        expect(node.childNodes[0].data).equal('Ho');
+      }
+    });
+  });
+
+  it('renders <input> value attribute', function() {
+    test({
+      template: new saddle.Element('input', {
+        value: new saddle.Attribute('hello')
+      })
+    , html: '<input value="hello">'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes[0].value).equal('hello');
+        expect(fragment.childNodes[0].getAttribute('value')).equal('hello');
+      }
+    });
+  });
+
+  it('renders <input> checked attribute: true', function() {
+    test({
+      template: new saddle.Element('input', {
+        type: new saddle.Attribute('radio')
+      , checked: new saddle.Attribute(true)
+      })
+    , html: '<input type="radio" checked>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes[0].checked).equal(true);
+      }
+    });
+  });
+  it('renders <input> checked attribute: false', function() {
+    test({
+      template: new saddle.Element('input', {
+        type: new saddle.Attribute('radio')
+      , checked: new saddle.Attribute(false)
+      })
+    , html: '<input type="radio">'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes[0].checked).equal(false);
+      }
+    });
   });
 }
 

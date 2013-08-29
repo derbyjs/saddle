@@ -1,5 +1,66 @@
+// https://github.com/jquery/jquery/blob/1.x-master/src/attributes/prop.js
+// https://github.com/jquery/jquery/blob/master/src/attributes/prop.js
+// http://webbugtrack.blogspot.com/2007/08/bug-242-setattribute-doesnt-always-work.html
+function AttributeMap(map) {
+  for (var key in map) {
+    this[key] = map[key];
+  }
+}
+var ATTRIBUTE_MAP = new AttributeMap({
+  checked: 'checked'
+, disabled: 'disabled'
+, selected: 'selected'
+, type: 'type'
+, value: 'value'
+, 'class': 'className'
+, 'for': 'htmlFor'
+, tabindex: 'tabIndex'
+, readonly: 'readOnly'
+, maxlength: 'maxLength'
+, cellspacing: 'cellSpacing'
+, cellpadding: 'cellPadding'
+, rowspan: 'rowSpan'
+, colspan: 'colSpan'
+, usemap: 'useMap'
+, frameborder: 'frameBorder'
+, contenteditable: 'contentEditable'
+, enctype: 'encoding'
+, id: 'id'
+, title: 'title'
+});
+// input.defaultChecked and input.defaultValue affect the attribute, so we want
+// to use these for initial dynamic rendering. For binding updates,
+// input.checked and input.value are modified.
+var CREATE_ATTRIBUTE_MAP = new AttributeMap(ATTRIBUTE_MAP);
+CREATE_ATTRIBUTE_MAP.checked = 'defaultChecked';
+CREATE_ATTRIBUTE_MAP.value = 'defaultValue';
+
+// http://www.w3.org/html/wg/drafts/html/master/syntax.html#void-elements
+var VOID_ELEMENT_MAP = {
+  area: true
+, base: true
+, br: true
+, col: true
+, embed: true
+, hr: true
+, img: true
+, input: true
+, keygen: true
+, link: true
+, menuitem: true
+, meta: true
+, param: true
+, source: true
+, track: true
+, wbr: true
+};
+
 module.exports = {
-  Template: Template
+  ATTRIBUTE_MAP: ATTRIBUTE_MAP
+, CREATE_ATTRIBUTE_MAP: CREATE_ATTRIBUTE_MAP
+, VOID_ELEMENT_MAP: VOID_ELEMENT_MAP
+
+, Template: Template
 , Text: Text
 , TextExpression: TextExpression
 , Comment: Comment
@@ -121,7 +182,10 @@ AttributeExpression.prototype.get = function(context, element, name) {
 };
 AttributeExpression.prototype.update = function(context, binding) {
   var value = context.get(this.expression);
-  if (value === false || value == null) {
+  var propertyName = ATTRIBUTE_MAP[binding.name];
+  if (propertyName) {
+    binding.element[propertyName] = value;
+  } else if (value === false || value == null) {
     binding.element.removeAttribute(binding.name);
   } else if (value === true) {
     binding.element.setAttribute(binding.name, binding.name);
@@ -147,11 +211,11 @@ function AttributesMap(object) {
   }
 }
 
-function Element(tag, attributes, contents, isVoid) {
+function Element(tag, attributes, contents) {
   this.tag = tag;
   this.attributes = attributes;
   this.contents = contents;
-  this.isVoid = isVoid;
+  this.isVoid = VOID_ELEMENT_MAP[tag.toLowerCase()];
 }
 Element.prototype = new Template();
 Element.prototype.getHtml = function(context) {
@@ -176,7 +240,10 @@ Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tag);
   for (var key in this.attributes) {
     var value = this.attributes[key].get(context, element, key);
-    if (value === true) {
+    var propertyName = CREATE_ATTRIBUTE_MAP[key];
+    if (propertyName) {
+      element[propertyName] = value;
+    } else if (value === true) {
       element.setAttribute(key, key);
     } else if (value !== false && value != null) {
       element.setAttribute(key, value);
@@ -657,12 +724,24 @@ var getNodeProperty = function(node, key) {
   return node[key];
 };
 
+function noop() {}
+
+
 //// IE shims & workarounds ////
 
 if (!Array.isArray) {
   Array.isArray = function(value) {
     return Object.prototype.toString.call(value) === '[object Array]';
   };
+}
+
+// Equivalent to textNode.splitText, which is buggy in IE <=9
+function splitData(node, index) {
+  var newNode = node.cloneNode(false);
+  newNode.deleteData(0, index);
+  node.deleteData(index, node.length - index);
+  node.parentNode.insertBefore(newNode, node.nextSibling);
+  return newNode;
 }
 
 function ObjectMapKeys() {}
@@ -695,43 +774,49 @@ ObjectMap.prototype.get = function(key) {
 };
 function NodeProperties() {}
 
-try {
-  // TEXT_NODEs are not expando prior to IE9
-  document.createTextNode('').$try = 0;
-} catch (err) {
-  setNodeProperty = function(node, key, value) {
-    // If TEXT_NODE
-    if (node.nodeType === 3) {
-      var parent = node.parentNode;
-      var objectMap = parent.$bindMap || (parent.$bindMap = new ObjectMap());
-      var nodeProperties = objectMap.get(node);
-      if (nodeProperties) {
+(function() {
+  // Don't try to shim in Node.js environment
+  if (typeof document === 'undefined') return;
+
+  // In IE, input.defaultValue doesn't work correctly, so use input.value,
+  // which mistakenly but conveniently sets both the value property and attribute.
+  // 
+  // Surprisingly, in IE <=7, input.defaultChecked must be used instead of
+  // input.checked before the input is in the document.
+  // http://webbugtrack.blogspot.com/2007/11/bug-299-setattribute-checked-does-not.html
+  var input = document.createElement('input');
+  input.defaultValue = 'x';
+  if (input.value !== 'x') {
+    CREATE_ATTRIBUTE_MAP.value = 'value';
+  }
+
+  try {
+    // TEXT_NODEs are not expando prior to IE9
+    document.createTextNode('').$try = 0;
+  } catch (err) {
+    setNodeProperty = function(node, key, value) {
+      // If TEXT_NODE
+      if (node.nodeType === 3) {
+        var parent = node.parentNode;
+        var objectMap = parent.$bindMap || (parent.$bindMap = new ObjectMap());
+        var nodeProperties = objectMap.get(node);
+        if (nodeProperties) {
+          return nodeProperties[key] = value;
+        }
+        nodeProperties = new NodeProperties();
+        objectMap.add(node, nodeProperties);
         return nodeProperties[key] = value;
       }
-      nodeProperties = new NodeProperties();
-      objectMap.add(node, nodeProperties);
-      return nodeProperties[key] = value;
-    }
-    return node[key] = value;
-  };
-  getNodeProperty = function(node, key) {
-    // If TEXT_NODE
-    if (node.nodeType === 3) {
-      var objectMap = node.parentNode.$bindMap;
-      var nodeProperties = objectMap && objectMap.get(node);
-      return nodeProperties && nodeProperties[key];
-    }
-    return node[key];
-  };
-}
-
-// Equivalent to textNode.splitText, which is buggy in IE <=9
-function splitData(node, index) {
-  var newNode = node.cloneNode(false);
-  newNode.deleteData(0, index);
-  node.deleteData(index, node.length - index);
-  node.parentNode.insertBefore(newNode, node.nextSibling);
-  return newNode;
-}
-
-function noop() {}
+      return node[key] = value;
+    };
+    getNodeProperty = function(node, key) {
+      // If TEXT_NODE
+      if (node.nodeType === 3) {
+        var objectMap = node.parentNode.$bindMap;
+        var nodeProperties = objectMap && objectMap.get(node);
+        return nodeProperties && nodeProperties[key];
+      }
+      return node[key];
+    };
+  }
+})();
