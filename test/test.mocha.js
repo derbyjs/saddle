@@ -410,9 +410,8 @@ describe('Binding updates', function() {
     var template = new saddle.Template([
       new saddle.ConditionalBlock([
         new saddle.Expression('show')
-      ], [[
-          new saddle.Text('shown')
-        ]
+      ], [
+        [new saddle.Text('shown')]
       ])
     ]);
     var bindings = render(template);
@@ -426,6 +425,31 @@ describe('Binding updates', function() {
     var context = getContext({show: false});
     bindings[0].update(context);
     expect(getText(fixture)).equal('');
+  });
+
+  it('updates a multi-condition ConditionalBlock', function() {
+    var template = new saddle.Template([
+      new saddle.ConditionalBlock([
+        new saddle.Expression('primary')
+      , new saddle.Expression('alternate')
+      , new saddle.ElseExpression()
+      ], [
+        [new saddle.DynamicText(new saddle.Expression())]
+      , []
+      , [new saddle.Text('else')]
+      ])
+    ]);
+    var bindings = render(template);
+    expect(bindings.length).equal(1);
+    expect(getText(fixture)).equal('else');
+    // Update value
+    var context = getContext({primary: 'Heyo'});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('Heyo');
+    // Reset to no data
+    var context = getContext();
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('else');
   });
 
 });

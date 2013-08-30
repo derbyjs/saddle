@@ -82,8 +82,7 @@ module.exports = {
 , replaceBindings: replaceBindings
 
 , Expression: Expression
-, IfExpression: IfExpression
-, EachExpression: EachExpression
+, ElseExpression: ElseExpression
 , ContextMeta: ContextMeta
 , Context: Context
 };
@@ -275,10 +274,10 @@ ConditionalBlock.prototype = new Block();
 ConditionalBlock.prototype.getHtml = function(context) {
   var html = '';
   for (var i = 0, len = this.expressions.length; i < len; i++) {
-    var blockContext = context.child(this.expressions[i]);
-    if (blockContext.get()) {
-      html += contentsHtml(this.contents[i], blockContext);
-      return html;
+    var expression = this.expressions[i];
+    if (expression.truthy(context)) {
+      html += contentsHtml(this.contents[i], context.child(expression));
+      break;
     }
   }
   return html;
@@ -289,9 +288,9 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   var end = document.createComment(this.ending);
   parent.appendChild(start);
   for (var i = 0, len = this.expressions.length; i < len; i++) {
-    var blockContext = context.child(this.expressions[i]);
-    if (blockContext.get()) {
-      appendContents(parent, this.contents[i], blockContext);
+    var expression = this.expressions[i];
+    if (expression.truthy(context)) {
+      appendContents(parent, this.contents[i], context.child(expression));
       break;
     }
   }
@@ -642,6 +641,7 @@ function mergeInto(from, to) {
 //   Expression(source)
 //   Expression::toString()
 //   Expression::get(context)
+//   Expression::truthy(context)
 function Expression(source) {
   this.source = source;
 }
@@ -649,33 +649,26 @@ Expression.prototype.toString = function() {
   return this.source;
 };
 Expression.prototype.get = function(context) {
-  return context._getProperty(this.source);
+  return (this.source) ?
+    context._getProperty(this.source) :
+    context.get();
+};
+Expression.prototype.truthy = function(context) {
+  return templateTruthy(this.get(context));
 };
 
-function IfExpression(source) {
-  this.source = source;
-  this.expression = new Expression(source);
-}
-IfExpression.prototype = new Expression;
-IfExpression.prototype.toString = function() {
-  return 'if ' + this.source;
-};
-IfExpression.prototype.get = function(context) {
-  var value = this.expression.get(context);
-  return (Array.isArray(value) && value.length === 0) ? null : value;
+function ElseExpression() {}
+ElseExpression.prototype = new Expression();
+ElseExpression.prototype.truthy = function() {
+  return true;
 };
 
-function EachExpression(source) {
-  this.source = source;
-  this.expression = new Expression(source);
+function templateTruthy(value) {
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  return value != null && value !== false && value !== '';
 }
-EachExpression.prototype = new Expression;
-EachExpression.prototype.toString = function() {
-  return 'each ' + this.source;
-};
-EachExpression.prototype.get = function(context) {
-  return this.expression.get(context);
-};
 
 // Context classes should be implemented specific to the containing framework's
 // data model and expression semantics. Context objects are created at render
@@ -686,8 +679,8 @@ EachExpression.prototype.get = function(context) {
 // The required interface methods are:
 //   Context::onAdd(binding)
 //   Context::onRemove(binding)
-//   Context::child(expression)
-//   Context::get(expression)
+//   Context::child(object)
+//   Context::get(object)
 function Context(meta, data, parent) {
   this.meta = meta;
   this.data = data;
@@ -699,14 +692,14 @@ Context.prototype.onAdd = function(binding) {
 Context.prototype.onRemove = function(binding) {
   this.meta.onRemove(binding);
 };
-Context.prototype.child = function(expression) {
-  var data = this.get(expression);
+Context.prototype.child = function(value) {
+  var data = this.get(value);
   return new Context(this.meta, data, this);
 };
-Context.prototype.get = function(expression) {
-  return (expression == null) ? this.data :
-    (expression instanceof Expression) ? expression.get(this) :
-    this._getProperty(expression);
+Context.prototype.get = function(value) {
+  return (value == null) ? this.data :
+    (value instanceof Expression) ? value.get(this) :
+    this._getProperty(value);
 };
 Context.prototype._getProperty = function(property) {
   return (this.data && this.data.hasOwnProperty(property)) ?

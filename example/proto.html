@@ -30,7 +30,7 @@ var template = new Block(_this, [
     ])
   , new Text('')
   , new Comment('Go, go comment node!')
-  , new ConditionalBlock([new IfExpression('comments'), _this], [[
+  , new ConditionalBlock([new Expression('comments'), _this], [[
         new Element('h1', null, [
           new Text('Comments')
         ])
@@ -41,7 +41,7 @@ var template = new Block(_this, [
         ])
       ]
     ])
-  , new EachBlock(new EachExpression('comments'), [
+  , new EachBlock(new Expression('comments'), [
       new Element('h2', null, [
         new Text('By ')
       , new Block('nonsense', [
