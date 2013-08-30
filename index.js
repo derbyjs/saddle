@@ -770,6 +770,7 @@ function getNodeProperty(node, key) {
       // If TEXT_NODE
       if (node.nodeType === 3) {
         var parent = node.parentNode;
+        if (!parent) return;
         var objectMap = parent.$bindMap || (parent.$bindMap = new ObjectMap());
         var nodeProperties = objectMap.get(node);
         if (nodeProperties) {
@@ -784,7 +785,9 @@ function getNodeProperty(node, key) {
     getNodeProperty = function(node, key) {
       // If TEXT_NODE
       if (node.nodeType === 3) {
-        var objectMap = node.parentNode.$bindMap;
+        var parent = node.parentNode;
+        if (!parent) return;
+        var objectMap = parent.$bindMap;
         var nodeProperties = objectMap && objectMap.get(node);
         return nodeProperties && nodeProperties[key];
       }
