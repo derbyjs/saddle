@@ -745,7 +745,12 @@ function setNodeProperty(node, key, value) {
   // Don't try to shim in Node.js environment
   if (typeof document === 'undefined') return;
 
-  // TODO: Investigate whether input name attribute works in IE 6-7
+  // TODO: Shim setAttribute('style'), which doesn't work in IE <=7
+  // http://webbugtrack.blogspot.com/2007/10/bug-245-setattribute-style-does-not.html
+
+  // TODO: Investigate whether input name attribute works in IE <=7. We could
+  // override Element::appendTo to use IE's alternative createElement syntax:
+  // document.createElement('<input name="xxx">')
   // http://webbugtrack.blogspot.com/2007/10/bug-235-createelement-is-broken-in-ie.html
 
   // In IE, input.defaultValue doesn't work correctly, so use input.value,
@@ -761,11 +766,13 @@ function setNodeProperty(node, key, value) {
   }
 
   try {
-    // TEXT_NODEs are not expando in IE <=8
+    // TextNodes are not expando in IE <=8
     document.createTextNode('').$try = 0;
   } catch (err) {
     setNodeProperty = function(node, key, value) {
-      // If TEXT_NODE
+      // If trying to set a property on a TextNode, create a proxy CommentNode
+      // and set the property on that node instead. Put the proxy after the
+      // TextNode if marking the end of a range, and before otherwise.
       if (node.nodeType === 3) {
         var proxyNode;
         if (key === '$bindEnd') {
@@ -785,6 +792,7 @@ function setNodeProperty(node, key, value) {
         }
         return proxyNode[key] = value;
       }
+      // Set the property directly on other node types
       return node[key] = value;
     };
   }
