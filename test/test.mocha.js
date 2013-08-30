@@ -402,6 +402,28 @@ describe('Binding updates', function() {
     expect(children[0].innerHTML).equal('');
   });
 
+  it('updates a single condition ConditionalBlock', function() {
+    var template = new saddle.Template([
+      new saddle.ConditionalBlock([
+        new saddle.Expression('show')
+      ], [[
+          new saddle.Text('shown')
+        ]
+      ])
+    ]);
+    var bindings = render(template);
+    expect(bindings.length).equal(1);
+    expect(getText(fixture)).equal('');
+    // Update value
+    var context = getContext({show: true});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('shown');
+    // Reset to no data
+    var context = getContext({show: false});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('');
+  });
+
 });
 
 // IE <=8 return comments for Node.children
@@ -413,4 +435,8 @@ function getChildren(node) {
     if (child.nodeType === 1) children.push(child);
   }
   return children;
+}
+
+function getText(node) {
+  return node.textContent || node.innerText;
 }
