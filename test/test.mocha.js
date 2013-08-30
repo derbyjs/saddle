@@ -311,10 +311,10 @@ describe('Binding updates', function() {
     ]);
     var bindings = render(template);
     expect(bindings.length).equal(1);
-    expect(fixture.innerHTML).equal('');
+    expect(getText(fixture)).equal('');
     var context = getContext({text: 'Yo'});
     bindings[0].update(context);
-    expect(fixture.innerHTML).equal('Yo');
+    expect(getText(fixture)).equal('Yo');
   });
 
   it('updates sibling TextNodes', function() {
@@ -324,12 +324,12 @@ describe('Binding updates', function() {
     ]);
     var bindings = render(template, {second: 2});
     expect(bindings.length).equal(2);
-    expect(fixture.innerHTML).equal('2');
+    expect(getText(fixture)).equal('2');
     var context = getContext({first: 'one', second: 'two'});
     bindings[0].update(context);
-    expect(fixture.innerHTML).equal('one2');
+    expect(getText(fixture)).equal('one2');
     bindings[1].update(context);
-    expect(fixture.innerHTML).equal('onetwo');
+    expect(getText(fixture)).equal('onetwo');
   });
 
   it('updates a CommentNode', function() {
@@ -378,28 +378,32 @@ describe('Binding updates', function() {
         new saddle.Element('h3', null, [
           new saddle.DynamicText(new saddle.Expression('name'))
         ])
+      , new saddle.DynamicText(new saddle.Expression('name'))
       ])
     ]);
     var bindings = render(template);
-    expect(bindings.length).equal(2);
+    expect(bindings.length).equal(3);
     var children = getChildren(fixture);
     expect(children.length).equal(1);
     expect(children[0].tagName.toLowerCase()).equal('h3');
-    expect(children[0].innerHTML).equal('');
+    expect(getText(children[0])).equal('');
+    expect(getText(fixture)).equal('');
     // Update entire block context
     var context = getContext({author: {name: 'John'}});
-    bindings[1].update(context);
+    bindings[2].update(context);
     var children = getChildren(fixture);
     expect(children.length).equal(1);
     expect(children[0].tagName.toLowerCase()).equal('h3');
-    expect(children[0].innerHTML).equal('John');
+    expect(getText(children[0])).equal('John');
+    expect(getText(fixture).replace(/\s/g, '')).equal('JohnJohn');
     // Reset to no data
     var context = getContext();
-    bindings[1].update(context);
+    bindings[2].update(context);
     var children = getChildren(fixture);
     expect(children.length).equal(1);
     expect(children[0].tagName.toLowerCase()).equal('h3');
-    expect(children[0].innerHTML).equal('');
+    expect(getText(children[0])).equal('');
+    expect(getText(fixture)).equal('');
   });
 
   it('updates a single condition ConditionalBlock', function() {

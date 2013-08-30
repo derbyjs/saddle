@@ -382,7 +382,7 @@ EachBlock.prototype.remove = function(context, binding, index, howMany) {
     var nextNode = node.nextSibling;
     parent.removeChild(node);
     emitRemoved(context.events, node, binding);
-    if (getNodeProperty(node, '$bindEnd')) {
+    if (node.$bindEnd) {
       if (howMany === ++i) return;
     }
     node = nextNode;
@@ -395,7 +395,7 @@ EachBlock.prototype.move = function(context, binding, from, to, howMany) {
   while (node) {
     var nextNode = node.nextSibling;
     fragment.appendChild(node);
-    if (getNodeProperty(node, '$bindEnd')) {
+    if (node.$bindEnd) {
       if (howMany === ++i) break;
     }
     node = nextNode;
@@ -408,7 +408,7 @@ function indexStartNode(node, index, endBound) {
   var i = 0;
   while (node = node.nextSibling) {
     if (node === endBound) return node;
-    if (getNodeProperty(node, '$bindStart')) {
+    if (node.$bindStart) {
       if (index === i) return node;
       i++;
     }
@@ -450,8 +450,8 @@ function replaceRange(context, start, end, fragment, binding) {
   var nextNode;
   while (node) {
     nextNode = node.nextSibling;
-    parent.removeChild(node);
     emitRemoved(context, node, binding);
+    parent.removeChild(node);
     if (node === end) break;
     node = nextNode;
   }
@@ -459,11 +459,11 @@ function replaceRange(context, start, end, fragment, binding) {
   parent.insertBefore(fragment, nextNode);
 }
 function emitRemoved(context, node, ignore) {
-  var binding = getNodeProperty(node, '$bindNode');
+  var binding = node.$bindNode;
   if (binding && binding !== ignore) context.onRemove(binding);
-  binding = getNodeProperty(node, '$bindStart');
+  binding = node.$bindStart;
   if (binding && binding !== ignore) context.onRemove(binding);
-  var attributes = getNodeProperty(node, '$bindAttributes');
+  var attributes = node.$bindAttributes;
   if (attributes) {
     for (var key in attributes) {
       context.onRemove(attributes[key]);
@@ -492,8 +492,8 @@ function AttributeBinding(template, element, name) {
   this.template = template;
   this.element = element;
   this.name = name;
-  var map = getNodeProperty(element, '$bindAttributes') ||
-    (setNodeProperty(element, '$bindAttributes', new AttributeBindingsMap()));
+  var map = element.$bindAttributes ||
+    (element.$bindAttributes = new AttributeBindingsMap());
   map[name] = this;
   this.id = null;
 }
@@ -592,27 +592,27 @@ function mismatchedNodes(node, mirrorNode) {
 }
 
 function replaceNodeBindings(node, mirrorNode) {
-  var binding = getNodeProperty(node, '$bindNode');
+  var binding = node.$bindNode;
   if (binding) {
     binding.node = mirrorNode;
     setNodeProperty(node, '$bindNode', binding);
   }
-  binding = getNodeProperty(node, '$bindStart');
+  binding = node.$bindStart;
   if (binding) {
     binding.start = mirrorNode;
     setNodeProperty(mirrorNode, '$bindStart', binding);
   }
-  binding = getNodeProperty(node, '$bindEnd');
+  binding = node.$bindEnd;
   if (binding) {
     binding.end = mirrorNode;
     setNodeProperty(mirrorNode, '$bindEnd', binding);
   }
-  var attributes = getNodeProperty(node, '$bindAttributes');
+  var attributes = node.$bindAttributes;
   if (attributes) {
     for (var key in attributes) {
       attributes[key].element = mirrorNode;
     }
-    setNodeProperty(mirrorNode, '$bindAttributes', attributes);
+    mirrorNode.$bindAttributes = attributes;
   }
 }
 
@@ -735,12 +735,9 @@ function splitData(node, index) {
   return newNode;
 }
 
-// These functions are defined so that they can be overriden in IE
+// Defined so that it can be overriden in IE <=8
 function setNodeProperty(node, key, value) {
   return node[key] = value;
-}
-function getNodeProperty(node, key) {
-  return node[key];
 }
 
 (function() {
@@ -769,60 +766,25 @@ function getNodeProperty(node, key) {
     setNodeProperty = function(node, key, value) {
       // If TEXT_NODE
       if (node.nodeType === 3) {
-        var parent = node.parentNode;
-        if (!parent) return;
-        var objectMap = parent.$bindMap || (parent.$bindMap = new ObjectMap());
-        var nodeProperties = objectMap.get(node);
-        if (nodeProperties) {
-          return nodeProperties[key] = value;
+        var proxyNode;
+        if (key === '$bindEnd') {
+          proxyNode = node.nextSibling;
+          if (!proxyNode || proxyNode.$bindProxy !== node) {
+            proxyNode = document.createComment('proxy');
+            proxyNode.$bindProxy = node;
+            node.parentNode.insertBefore(proxyNode, node.nextSibling);
+          }
+        } else {
+          proxyNode = node.previousSibling;
+          if (!proxyNode || proxyNode.$bindProxy !== node) {
+            proxyNode = document.createComment('proxy');
+            proxyNode.$bindProxy = node;
+            node.parentNode.insertBefore(proxyNode, node);
+          }
         }
-        nodeProperties = new NodeProperties();
-        objectMap.add(node, nodeProperties);
-        return nodeProperties[key] = value;
+        return proxyNode[key] = value;
       }
       return node[key] = value;
     };
-    getNodeProperty = function(node, key) {
-      // If TEXT_NODE
-      if (node.nodeType === 3) {
-        var parent = node.parentNode;
-        if (!parent) return;
-        var objectMap = parent.$bindMap;
-        var nodeProperties = objectMap && objectMap.get(node);
-        return nodeProperties && nodeProperties[key];
-      }
-      return node[key];
-    };
   }
-
-  function ObjectMapKeys() {}
-  function ObjectMapValues() {}
-  function ObjectMap() {
-    this.count = 0;
-    this.keys = new ObjectMapKeys();
-    this.values = new ObjectMapValues();
-  }
-  ObjectMap.prototype.keyId = function(key) {
-    var keys = this.keys;
-    for (var id in keys) {
-      if (keys[id] === key) return id;
-    }
-  };
-  ObjectMap.prototype.add = function(key, value) {
-    var id = (++this.count).toString();
-    this.keys[id] = key;
-    this.values[id] = value;
-  };
-  ObjectMap.prototype.remove = function(key) {
-    var id = this.keyId(key);
-    if (!id) return;
-    delete this.keys[id];
-    delete this.values[id];
-  };
-  ObjectMap.prototype.get = function(key) {
-    var id = this.keyId(key);
-    return id && this.values[id];
-  };
-
-  function NodeProperties() {}
 })();

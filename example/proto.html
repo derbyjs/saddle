@@ -28,13 +28,13 @@ var template = new Block(_this, [
     }), [
       new DynamicText(new Expression('body'))
     ])
-  , new Text('\n')
+  , new Text('')
   , new Comment('Go, go comment node!')
   , new ConditionalBlock([new IfExpression('comments'), _this], [[
         new Element('h1', null, [
           new Text('Comments')
         ])
-      , new Text('\n')
+      , new Text('')
       ], [
         new Element('h1', null, [
           new Text('No comments')
