@@ -246,9 +246,7 @@ function Block(expression, contents) {
 Block.prototype = new Template();
 Block.prototype.getHtml = function(context) {
   var blockContext = context.child(this.expression);
-  return '<!--' + this.expression + '-->' +
-    contentsHtml(this.contents, blockContext) +
-    '<!--' + this.ending + '-->';
+  return contentsHtml(this.contents, blockContext);
 };
 Block.prototype.appendTo = function(parent, context, binding) {
   var blockContext = context.child(this.expression);
@@ -275,15 +273,15 @@ function ConditionalBlock(expressions, contents) {
 }
 ConditionalBlock.prototype = new Block();
 ConditionalBlock.prototype.getHtml = function(context) {
-  var html = '<!--' + this.beginning + '-->';
+  var html = '';
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var blockContext = context.child(this.expressions[i]);
     if (blockContext.get()) {
       html += contentsHtml(this.contents[i], blockContext);
-      break;
+      return html;
     }
   }
-  return html + '<!--' + this.ending + '-->';
+  return html;
 };
 ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   var blockContext = context.child(this.expression);
@@ -311,16 +309,17 @@ EachBlock.prototype = new Block();
 EachBlock.prototype.getHtml = function(context) {
   var listContext = context.child(this.expression);
   var items = listContext.get();
-  var html = '<!--' + this.expression + '-->';
   if (items && items.length) {
+    var html = '';
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.child(i);
-      html += contentsHtml(this.contents, itemContext) || '<!--empty-->';
+      html += contentsHtml(this.contents, itemContext);
     }
+    return html;
   } else if (this.elseContents) {
-    html += contentsHtml(this.elseContents, listContext);
+    return contentsHtml(this.elseContents, listContext);
   }
-  return html + '<!--' + this.ending + '-->';
+  return '';
 };
 EachBlock.prototype.appendTo = function(parent, context, binding) {
   var listContext = context.child(this.expression);
@@ -542,7 +541,9 @@ function replaceBindings(fragment, mirror) {
         mirror.insertBefore(mirrorNode, nextMirrorNode);
       }
 
-    // Create CommentNodes that IE sometimes ignores when parsing HTML
+    // Create missing CommentNodes. Comments are used as DOM location markers
+    // when rendering bindings, but not when rendering HTML. In addition, old
+    // versions of IE fail to create some CommentNodes when parsing HTML
     } else if (node.nodeType === 8) {
       if (
         !mirrorNode ||
