@@ -395,7 +395,7 @@ describe('Binding updates', function() {
     expect(children.length).equal(1);
     expect(children[0].tagName.toLowerCase()).equal('h3');
     expect(getText(children[0])).equal('John');
-    expect(getText(fixture).replace(/\s/g, '')).equal('JohnJohn');
+    expect(getText(fixture)).equal('JohnJohn');
     // Reset to no data
     var context = getContext();
     bindings[2].update(context);
@@ -581,8 +581,41 @@ describe('Binding updates', function() {
     expect(getText(fixture)).equal('ThreeTwoOne');
   });
 
-  it('inserts into an empty list with an else');
+  it('insert, move, and remove with multiple node items', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new saddle.Expression('items'), [
+        new saddle.Element('h3', null, [
+          new saddle.DynamicText(new saddle.Expression('title'))
+        ])
+      , new saddle.DynamicText(new saddle.Expression('text'))
+      ])
+    ]);
+    var data = {items: [
+      {title: '1', text: 'one'}
+    , {title: '2', text: 'two'}
+    , {title: '3', text: 'three'}
+    ]};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('1one2two3three');
+    var context = getContext(data);
+    // Insert an item
+    data.items.splice(2, 0, {title: '4', text: 'four'})
+    binding.insert(context, 2, 1);
+    expect(getText(fixture)).equal('1one2two4four3three');
+    // Move items
+    move(data.items, 1, 0, 3);
+    binding.move(context, 1, 0, 3);
+    expect(getText(fixture)).equal('2two4four3three1one');
+    // Remove an item
+    data.items.splice(2, 1);
+    binding.remove(context, 2, 1);
+    expect(getText(fixture)).equal('2two4four1one');
+  });
 
+  // TODO: Should Saddle take care of these edge cases, or should the containing
+  // framework be smart enough to call binding.update() in these cases instead
+  // of binding.insert() / binding.remove()?
+  it('inserts into an empty list with an else');
   it('removes all items from a list with an else');
 
 });
@@ -599,7 +632,8 @@ function getChildren(node) {
 }
 
 function getText(node) {
-  return node.textContent || node.innerText;
+  // IE only supports innerText, and it sometimes returns extra whitespace
+  return (node.textContent || node.innerText).replace(/\s/g, '');
 }
 
 function move(array, from, to, howMany) {
