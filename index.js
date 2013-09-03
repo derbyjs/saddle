@@ -379,7 +379,7 @@ EachBlock.prototype.remove = function(context, binding, index, howMany) {
   while (node) {
     var nextNode = node.nextSibling;
     parent.removeChild(node);
-    emitRemoved(context.events, node, binding);
+    emitRemoved(context, node, binding);
     if (node.$bindEnd) {
       if (howMany === ++i) return;
     }
