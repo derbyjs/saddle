@@ -446,11 +446,144 @@ describe('Binding updates', function() {
     var context = getContext({primary: 'Heyo'});
     bindings[0].update(context);
     expect(getText(fixture)).equal('Heyo');
+    // Update value
+    var context = getContext({alternate: true});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('');
     // Reset to no data
     var context = getContext();
     bindings[0].update(context);
     expect(getText(fixture)).equal('else');
   });
+
+  it('updates an each of text', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new saddle.Expression('items'), [
+        new saddle.DynamicText(new saddle.Expression())
+      ])
+    ]);
+    var bindings = render(template);
+    expect(bindings.length).equal(1);
+    expect(getText(fixture)).equal('');
+    // Update value
+    var context = getContext({items: ['One', 'Two', 'Three']});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('OneTwoThree');
+    // Update value
+    var context = getContext({items: ['Four', 'Five']});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('FourFive');
+    // Update value
+    var context = getContext({items: []});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('');
+    // Reset to no data
+    var context = getContext();
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('');
+  });
+
+  it('updates an each with an else', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new saddle.Expression('items'), [
+        new saddle.DynamicText(new saddle.Expression('name'))
+      ], [
+        new saddle.Text('else')
+      ])
+    ]);
+    var bindings = render(template);
+    expect(bindings.length).equal(1);
+    expect(getText(fixture)).equal('else');
+    // Update value
+    var context = getContext({items: [
+      {name: 'One'}, {name: 'Two'}, {name: 'Three'}
+    ]});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('OneTwoThree');
+    // Update value
+    var context = getContext({items: [
+      {name: 'Four'}, {name: 'Five'}
+    ]});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('FourFive');
+    // Update value
+    var context = getContext({items: []});
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('else');
+    // Reset to no data
+    var context = getContext();
+    bindings[0].update(context);
+    expect(getText(fixture)).equal('else');
+  });
+
+  it('inserts in an each', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new saddle.Expression('items'), [
+        new saddle.DynamicText(new saddle.Expression('name'))
+      ])
+    ]);
+    var binding = render(template).pop();
+    expect(getText(fixture)).equal('');
+    // Insert from null state
+    var data = {items: [
+      {name: 'One'}, {name: 'Two'}, {name: 'Three'}
+    ]};
+    var context = getContext(data);
+    binding.insert(context, 0, 3);
+    expect(getText(fixture)).equal('OneTwoThree');
+    // Insert new items
+    data.items.splice(1, 0, {name: 'Four'}, {name: 'Five'});
+    binding.insert(context, 1, 2);
+    expect(getText(fixture)).equal('OneFourFiveTwoThree');
+  });
+
+  it('removes in an each', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new saddle.Expression('items'), [
+        new saddle.DynamicText(new saddle.Expression('name'))
+      ])
+    ]);
+    var data = {items: [
+      {name: 'One'}, {name: 'Two'}, {name: 'Three'}
+    ]};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('OneTwoThree');
+    var context = getContext(data);
+    // Remove inner item
+    data.items.splice(1, 1);
+    binding.remove(context, 1, 1);
+    expect(getText(fixture)).equal('OneThree');
+    // Remove multiple remaining
+    data.items.splice(0, 2);
+    binding.remove(context, 0, 2);
+    expect(getText(fixture)).equal('');
+  });
+
+  it('moves in an each', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new saddle.Expression('items'), [
+        new saddle.DynamicText(new saddle.Expression('name'))
+      ])
+    ]);
+    var data = {items: [
+      {name: 'One'}, {name: 'Two'}, {name: 'Three'}
+    ]};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('OneTwoThree');
+    var context = getContext(data);
+    // Move one item
+    move(data.items, 1, 2, 1);
+    binding.move(context, 1, 2, 1);
+    expect(getText(fixture)).equal('OneThreeTwo');
+    // Move multiple items
+    move(data.items, 1, 0, 2);
+    binding.move(context, 1, 0, 2);
+    expect(getText(fixture)).equal('ThreeTwoOne');
+  });
+
+  it('inserts into an empty list with an else');
+
+  it('removes all items from a list with an else');
 
 });
 
@@ -467,4 +600,9 @@ function getChildren(node) {
 
 function getText(node) {
   return node.textContent || node.innerText;
+}
+
+function move(array, from, to, howMany) {
+  var values = array.splice(from, howMany);
+  array.splice.apply(array, [to, 0].concat(values))
 }
