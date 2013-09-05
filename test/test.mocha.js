@@ -309,11 +309,10 @@ describe('Binding updates', function() {
     var template = new saddle.Template([
       new saddle.DynamicText(new expressions.Expression('text'))
     ]);
-    var bindings = render(template);
-    expect(bindings.length).equal(1);
+    var binding = render(template).pop();
     expect(getText(fixture)).equal('');
-    var context = getContext({text: 'Yo'});
-    bindings[0].update(context);
+    binding.context = getContext({text: 'Yo'});
+    binding.update();
     expect(getText(fixture)).equal('Yo');
   });
 
@@ -326,9 +325,11 @@ describe('Binding updates', function() {
     expect(bindings.length).equal(2);
     expect(getText(fixture)).equal('2');
     var context = getContext({first: 'one', second: 'two'});
-    bindings[0].update(context);
+    bindings[0].context = context;
+    bindings[0].update();
     expect(getText(fixture)).equal('one2');
-    bindings[1].update(context);
+    bindings[1].context = context;
+    bindings[1].update();
     expect(getText(fixture)).equal('onetwo');
   });
 
@@ -336,11 +337,10 @@ describe('Binding updates', function() {
     var template = new saddle.Template([
       new saddle.DynamicComment(new expressions.Expression('comment'))
     ]);
-    var bindings = render(template, {comment: 'Hi'});
-    expect(bindings.length).equal(1);
+    var binding = render(template, {comment: 'Hi'}).pop();
     expect(fixture.innerHTML).equal('<!--Hi-->');
-    var context = getContext({comment: 'Bye'});
-    bindings[0].update(context);
+    binding.context = getContext({comment: 'Bye'});
+    binding.update();
     expect(fixture.innerHTML).equal('<!--Bye-->');
   });
 
@@ -351,22 +351,21 @@ describe('Binding updates', function() {
       , 'data-greeting': new saddle.DynamicAttribute(new expressions.Expression('greeting'))
       }))
     ]);
-    var bindings = render(template);
-    expect(bindings.length).equal(1);
+    var binding = render(template).pop();
     var node = fixture.firstChild;
     expect(node.className).equal('message');
     expect(node.getAttribute('data-greeting')).eql(null);
     // Set initial value
-    var context = getContext({greeting: 'Yo'});
-    bindings[0].update(context);
+    binding.context = getContext({greeting: 'Yo'});
+    binding.update();
     expect(node.getAttribute('data-greeting')).equal('Yo');
     // Change value for same attribute
-    var context = getContext({greeting: 'Hi'});
-    bindings[0].update(context);
+    binding.context = getContext({greeting: 'Hi'});
+    binding.update();
     expect(node.getAttribute('data-greeting')).equal('Hi');
     // Remove value
-    var context = getContext();
-    bindings[0].update(context);
+    binding.context = getContext();
+    binding.update();
     expect(node.getAttribute('data-greeting')).eql(null);
     // Dynamic updates don't affect static attribute
     expect(node.className).equal('message');
@@ -381,24 +380,23 @@ describe('Binding updates', function() {
       , new saddle.DynamicText(new expressions.Expression('name'))
       ])
     ]);
-    var bindings = render(template);
-    expect(bindings.length).equal(3);
+    var binding = render(template).pop();
     var children = getChildren(fixture);
     expect(children.length).equal(1);
     expect(children[0].tagName.toLowerCase()).equal('h3');
     expect(getText(children[0])).equal('');
     expect(getText(fixture)).equal('');
     // Update entire block context
-    var context = getContext({author: {name: 'John'}});
-    bindings[2].update(context);
+    binding.context = getContext({author: {name: 'John'}});
+    binding.update();
     var children = getChildren(fixture);
     expect(children.length).equal(1);
     expect(children[0].tagName.toLowerCase()).equal('h3');
     expect(getText(children[0])).equal('John');
     expect(getText(fixture)).equal('JohnJohn');
     // Reset to no data
-    var context = getContext();
-    bindings[2].update(context);
+    binding.context = getContext();
+    binding.update();
     var children = getChildren(fixture);
     expect(children.length).equal(1);
     expect(children[0].tagName.toLowerCase()).equal('h3');
@@ -414,16 +412,15 @@ describe('Binding updates', function() {
         [new saddle.Text('shown')]
       ])
     ]);
-    var bindings = render(template);
-    expect(bindings.length).equal(1);
+    var binding = render(template).pop();
     expect(getText(fixture)).equal('');
     // Update value
-    var context = getContext({show: true});
-    bindings[0].update(context);
+    binding.context = getContext({show: true});
+    binding.update();
     expect(getText(fixture)).equal('shown');
     // Reset to no data
-    var context = getContext({show: false});
-    bindings[0].update(context);
+    binding.context = getContext({show: false});
+    binding.update();
     expect(getText(fixture)).equal('');
   });
 
@@ -439,20 +436,19 @@ describe('Binding updates', function() {
       , [new saddle.Text('else')]
       ])
     ]);
-    var bindings = render(template);
-    expect(bindings.length).equal(1);
+    var binding = render(template).pop();
     expect(getText(fixture)).equal('else');
     // Update value
-    var context = getContext({primary: 'Heyo'});
-    bindings[0].update(context);
+    binding.context = getContext({primary: 'Heyo'});
+    binding.update();
     expect(getText(fixture)).equal('Heyo');
     // Update value
-    var context = getContext({alternate: true});
-    bindings[0].update(context);
+    binding.context = getContext({alternate: true});
+    binding.update();
     expect(getText(fixture)).equal('');
     // Reset to no data
-    var context = getContext();
-    bindings[0].update(context);
+    binding.context = getContext();
+    binding.update();
     expect(getText(fixture)).equal('else');
   });
 
@@ -462,24 +458,23 @@ describe('Binding updates', function() {
         new saddle.DynamicText(new expressions.Expression())
       ])
     ]);
-    var bindings = render(template);
-    expect(bindings.length).equal(1);
+    var binding = render(template).pop();
     expect(getText(fixture)).equal('');
     // Update value
-    var context = getContext({items: ['One', 'Two', 'Three']});
-    bindings[0].update(context);
+    binding.context = getContext({items: ['One', 'Two', 'Three']});
+    binding.update();
     expect(getText(fixture)).equal('OneTwoThree');
     // Update value
-    var context = getContext({items: ['Four', 'Five']});
-    bindings[0].update(context);
+    binding.context = getContext({items: ['Four', 'Five']});
+    binding.update();
     expect(getText(fixture)).equal('FourFive');
     // Update value
-    var context = getContext({items: []});
-    bindings[0].update(context);
+    binding.context = getContext({items: []});
+    binding.update();
     expect(getText(fixture)).equal('');
     // Reset to no data
-    var context = getContext();
-    bindings[0].update(context);
+    binding.context = getContext();
+    binding.update();
     expect(getText(fixture)).equal('');
   });
 
@@ -491,28 +486,27 @@ describe('Binding updates', function() {
         new saddle.Text('else')
       ])
     ]);
-    var bindings = render(template);
-    expect(bindings.length).equal(1);
+    var binding = render(template).pop();
     expect(getText(fixture)).equal('else');
     // Update value
-    var context = getContext({items: [
+    binding.context = getContext({items: [
       {name: 'One'}, {name: 'Two'}, {name: 'Three'}
     ]});
-    bindings[0].update(context);
+    binding.update();
     expect(getText(fixture)).equal('OneTwoThree');
     // Update value
-    var context = getContext({items: [
+    binding.context = getContext({items: [
       {name: 'Four'}, {name: 'Five'}
     ]});
-    bindings[0].update(context);
+    binding.update();
     expect(getText(fixture)).equal('FourFive');
     // Update value
-    var context = getContext({items: []});
-    bindings[0].update(context);
+    binding.context = getContext({items: []});
+    binding.update();
     expect(getText(fixture)).equal('else');
     // Reset to no data
-    var context = getContext();
-    bindings[0].update(context);
+    binding.context = getContext();
+    binding.update();
     expect(getText(fixture)).equal('else');
   });
 
@@ -528,12 +522,12 @@ describe('Binding updates', function() {
     var data = {items: [
       {name: 'One'}, {name: 'Two'}, {name: 'Three'}
     ]};
-    var context = getContext(data);
-    binding.insert(context, 0, 3);
+    binding.context = getContext(data);
+    binding.insert(0, 3);
     expect(getText(fixture)).equal('OneTwoThree');
     // Insert new items
     data.items.splice(1, 0, {name: 'Four'}, {name: 'Five'});
-    binding.insert(context, 1, 2);
+    binding.insert(1, 2);
     expect(getText(fixture)).equal('OneFourFiveTwoThree');
   });
 
@@ -548,14 +542,14 @@ describe('Binding updates', function() {
     ]};
     var binding = render(template, data).pop();
     expect(getText(fixture)).equal('OneTwoThree');
-    var context = getContext(data);
+    binding.context = getContext(data);
     // Remove inner item
     data.items.splice(1, 1);
-    binding.remove(context, 1, 1);
+    binding.remove(1, 1);
     expect(getText(fixture)).equal('OneThree');
     // Remove multiple remaining
     data.items.splice(0, 2);
-    binding.remove(context, 0, 2);
+    binding.remove(0, 2);
     expect(getText(fixture)).equal('');
   });
 
@@ -570,14 +564,14 @@ describe('Binding updates', function() {
     ]};
     var binding = render(template, data).pop();
     expect(getText(fixture)).equal('OneTwoThree');
-    var context = getContext(data);
+    binding.context = getContext(data);
     // Move one item
     move(data.items, 1, 2, 1);
-    binding.move(context, 1, 2, 1);
+    binding.move(1, 2, 1);
     expect(getText(fixture)).equal('OneThreeTwo');
     // Move multiple items
     move(data.items, 1, 0, 2);
-    binding.move(context, 1, 0, 2);
+    binding.move(1, 0, 2);
     expect(getText(fixture)).equal('ThreeTwoOne');
   });
 
@@ -597,18 +591,18 @@ describe('Binding updates', function() {
     ]};
     var binding = render(template, data).pop();
     expect(getText(fixture)).equal('1one2two3three');
-    var context = getContext(data);
+    binding.context = getContext(data);
     // Insert an item
     data.items.splice(2, 0, {title: '4', text: 'four'})
-    binding.insert(context, 2, 1);
+    binding.insert(2, 1);
     expect(getText(fixture)).equal('1one2two4four3three');
     // Move items
     move(data.items, 1, 0, 3);
-    binding.move(context, 1, 0, 3);
+    binding.move(1, 0, 3);
     expect(getText(fixture)).equal('2two4four3three1one');
     // Remove an item
     data.items.splice(2, 1);
-    binding.remove(context, 2, 1);
+    binding.remove(2, 1);
     expect(getText(fixture)).equal('2two4four1one');
   });
 

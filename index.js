@@ -123,7 +123,7 @@ DynamicText.prototype.appendTo = function(parent, context) {
   var data = this.expression.get(context) || '';
   var node = document.createTextNode(data);
   parent.appendChild(node);
-  context.onAdd(new NodeBinding(this, node));
+  context.onAdd(new NodeBinding(this, context, node));
 };
 DynamicText.prototype.update = function(context, binding) {
   binding.node.data = this.expression.get(context) || '';
@@ -152,7 +152,7 @@ DynamicComment.prototype.appendTo = function(parent, context) {
   var data = this.expression.get(context) || '';
   var node = document.createComment(data);
   parent.appendChild(node);
-  context.onAdd(new NodeBinding(this, node));
+  context.onAdd(new NodeBinding(this, context, node));
 };
 DynamicComment.prototype.update = function(context, binding) {
   binding.node.data = this.expression.get(context) || '';
@@ -172,7 +172,7 @@ DynamicAttribute.prototype.getHtml = function(context) {
   return this.expression.get(context);
 };
 DynamicAttribute.prototype.get = function(context, element, name) {
-  context.onAdd(new AttributeBinding(this, element, name));
+  context.onAdd(new AttributeBinding(this, context, element, name));
   return this.expression.get(context);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
@@ -416,10 +416,9 @@ function updateRange(context, binding, template, start, end, isItem) {
     binding.end = end;
     setNodeProperty(start, '$bindStart', binding);
     setNodeProperty(end, '$bindEnd', binding);
-    return;
+  } else {
+    context.onAdd(new RangeBinding(template, context, start, end, isItem));
   }
-  binding = new RangeBinding(template, start, end, isItem);
-  if (!isItem) context.onAdd(binding);
 }
 
 function appendContents(parent, contents, context) {
@@ -471,48 +470,48 @@ function emitRemoved(context, node, ignore) {
 }
 
 function Binding() {}
-Binding.prototype.update = function(context) {
-  this.template.update(context, this);
+Binding.prototype.update = function() {
+  this.template.update(this.context, this);
 };
 
-function NodeBinding(template, node) {
+function NodeBinding(template, context, node) {
   this.template = template;
+  this.context = context;
   this.node = node;
   setNodeProperty(node, '$bindNode', this);
-  this.id = null;
 }
 NodeBinding.prototype = new Binding();
 
 function AttributeBindingsMap() {}
-function AttributeBinding(template, element, name) {
+function AttributeBinding(template, context, element, name) {
   this.template = template;
+  this.context = context;
   this.element = element;
   this.name = name;
   var map = element.$bindAttributes ||
     (element.$bindAttributes = new AttributeBindingsMap());
   map[name] = this;
-  this.id = null;
 }
 AttributeBinding.prototype = new Binding();
 
-function RangeBinding(template, start, end, isItem) {
+function RangeBinding(template, context, start, end, isItem) {
   this.template = template;
+  this.context = context;
   this.start = start;
   this.end = end;
   this.isItem = isItem;
   setNodeProperty(start, '$bindStart', this);
   setNodeProperty(end, '$bindEnd', this);
-  this.id = null;
 }
 RangeBinding.prototype = new Binding();
-RangeBinding.prototype.insert = function(context, index, howMany) {
-  this.template.insert(context, this, index, howMany);
+RangeBinding.prototype.insert = function(index, howMany) {
+  this.template.insert(this.context, this, index, howMany);
 };
-RangeBinding.prototype.remove = function(context, index, howMany) {
-  this.template.remove(context, this, index, howMany);
+RangeBinding.prototype.remove = function(index, howMany) {
+  this.template.remove(this.context, this, index, howMany);
 };
-RangeBinding.prototype.move = function(context, from, to, howMany) {
-  this.template.move(context, this, from, to, howMany);
+RangeBinding.prototype.move = function(from, to, howMany) {
+  this.template.move(this.context, this, from, to, howMany);
 };
 
 
