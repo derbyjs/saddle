@@ -420,7 +420,9 @@ function updateRange(context, binding, template, start, end, isItem) {
     setNodeProperty(start, '$bindStart', binding);
     setNodeProperty(end, '$bindEnd', binding);
   } else {
-    context.onAdd(new RangeBinding(template, start, end, isItem));
+    if (!isItem) {
+      context.onAdd(new RangeBinding(template, start, end, isItem));
+    }
   }
 }
 
