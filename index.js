@@ -416,11 +416,10 @@ function updateRange(context, binding, template, start, end, isItem) {
     binding.end = end;
     setNodeProperty(start, '$bindStart', binding);
     setNodeProperty(end, '$bindEnd', binding);
-  } else {
-    if (!isItem) {
-      context.onAdd(new RangeBinding(template, start, end, isItem));
-    }
+    return;
   }
+  binding = new RangeBinding(template, start, end, isItem);
+  if (!isItem) context.onAdd(binding);
 }
 
 function appendContents(parent, contents, context) {
