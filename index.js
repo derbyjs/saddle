@@ -61,6 +61,7 @@ module.exports = {
 , UPDATE_PROPERTIES: UPDATE_PROPERTIES
 , VOID_ELEMENTS: VOID_ELEMENTS
 
+  // Template Classes
 , Template: Template
 , Text: Text
 , DynamicText: DynamicText
@@ -75,16 +76,13 @@ module.exports = {
 , DynamicAttribute: DynamicAttribute
 , AttributesMap: AttributesMap
 
+  // Binding Classes
 , Binding: Binding
 , NodeBinding: NodeBinding
 , AttributeBinding: AttributeBinding
 , RangeBinding: RangeBinding
-, replaceBindings: replaceBindings
 
-, Expression: Expression
-, ElseExpression: ElseExpression
-, ContextMeta: ContextMeta
-, Context: Context
+, replaceBindings: replaceBindings
 };
 
 function Template(contents) {
@@ -119,16 +117,16 @@ function DynamicText(expression) {
 }
 DynamicText.prototype = new Template();
 DynamicText.prototype.getHtml = function(context) {
-  return context.get(this.expression) || '';
+  return this.expression.get(context) || '';
 };
 DynamicText.prototype.appendTo = function(parent, context) {
-  var data = context.get(this.expression) || '';
+  var data = this.expression.get(context) || '';
   var node = document.createTextNode(data);
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, node));
 };
 DynamicText.prototype.update = function(context, binding) {
-  binding.node.data = context.get(this.expression) || '';
+  binding.node.data = this.expression.get(context) || '';
 };
 
 function Comment(data) {
@@ -148,16 +146,16 @@ function DynamicComment(expression) {
 }
 DynamicComment.prototype = new Template();
 DynamicComment.prototype.getHtml = function(context) {
-  return '<!--' + (context.get(this.expression) || '') + '-->';
+  return '<!--' + (this.expression.get(context) || '') + '-->';
 };
 DynamicComment.prototype.appendTo = function(parent, context) {
-  var data = context.get(this.expression) || '';
+  var data = this.expression.get(context) || '';
   var node = document.createComment(data);
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, node));
 };
 DynamicComment.prototype.update = function(context, binding) {
-  binding.node.data = context.get(this.expression) || '';
+  binding.node.data = this.expression.get(context) || '';
 };
 
 function Attribute(data) {
@@ -171,14 +169,14 @@ function DynamicAttribute(expression) {
   this.expression = expression;
 }
 DynamicAttribute.prototype.getHtml = function(context) {
-  return context.get(this.expression);
+  return this.expression.get(context);
 };
 DynamicAttribute.prototype.get = function(context, element, name) {
   context.onAdd(new AttributeBinding(this, element, name));
-  return context.get(this.expression);
+  return this.expression.get(context);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
-  var value = context.get(this.expression);
+  var value = this.expression.get(context);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     binding.element[propertyName] = value;
@@ -283,7 +281,6 @@ ConditionalBlock.prototype.getHtml = function(context) {
   return html;
 };
 ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
-  var blockContext = context.child(this.expression);
   var start = document.createComment(this.beginning);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
@@ -306,12 +303,12 @@ function EachBlock(expression, contents, elseContents) {
 }
 EachBlock.prototype = new Block();
 EachBlock.prototype.getHtml = function(context) {
+  var items = this.expression.get(context);
   var listContext = context.child(this.expression);
-  var items = listContext.get();
   if (items && items.length) {
     var html = '';
     for (var i = 0, len = items.length; i < len; i++) {
-      var itemContext = listContext.child(i);
+      var itemContext = listContext.eachChild(i);
       html += contentsHtml(this.contents, itemContext);
     }
     return html;
@@ -321,14 +318,14 @@ EachBlock.prototype.getHtml = function(context) {
   return '';
 };
 EachBlock.prototype.appendTo = function(parent, context, binding) {
+  var items = this.expression.get(context);
   var listContext = context.child(this.expression);
-  var items = listContext.get();
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
-      var itemContext = listContext.child(i);
+      var itemContext = listContext.eachChild(i);
       this.appendItemTo(parent, itemContext);
     }
   } else if (this.elseContents) {
@@ -362,12 +359,12 @@ EachBlock.prototype.update = function(context, binding) {
   replaceRange(context, start, end, fragment, binding);
 };
 EachBlock.prototype.insert = function(context, binding, index, howMany) {
+  var items = this.expression.get(context);
   var listContext = context.child(this.expression);
-  var items = listContext.get();
   var node = indexStartNode(binding.start, index, binding.end);
   var fragment = document.createDocumentFragment();
   for (var i = index, len = index + howMany; i < len; i++) {
-    var itemContext = listContext.child(i);
+    var itemContext = listContext.eachChild(i);
     this.appendItemTo(fragment, itemContext);
   }
   binding.start.parentNode.insertBefore(fragment, node);
@@ -627,90 +624,6 @@ function mergeInto(from, to) {
   for (var key in from) {
     to[key] = from[key];
   }
-}
-
-
-//// Example framework-specific classes ////
-
-// Expression classes should be implemented specific to the containing
-// framework's data model and expression semantics. They are created when
-// templates are instantiated, so any source string parsing that can be done
-// once should be performed by the Expression constructor. This is an example
-// set of expresions, but a framework can have an arbitrary number of
-// expression types.
-//
-// The required interface methods are:
-//   Expression(source)
-//   Expression::toString()
-//   Expression::get(context)
-//   Expression::truthy(context)
-function Expression(source) {
-  this.source = source;
-}
-Expression.prototype.toString = function() {
-  return this.source;
-};
-Expression.prototype.get = function(context) {
-  return (this.source) ?
-    context._getProperty(this.source) :
-    context.get();
-};
-Expression.prototype.truthy = function(context) {
-  return templateTruthy(this.get(context));
-};
-
-function ElseExpression() {}
-ElseExpression.prototype = new Expression();
-ElseExpression.prototype.truthy = function() {
-  return true;
-};
-
-function templateTruthy(value) {
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
-  return value != null && value !== false && value !== '';
-}
-
-// Context classes should be implemented specific to the containing framework's
-// data model and expression semantics. Context objects are created at render
-// and binding update time, so they should be fast and minimally complex.
-// Framework specific work, such as parsing template language specific syntax,
-// should be done in Expression object instantiation whenever possible.
-//
-// The required interface methods are:
-//   Context::onAdd(binding)
-//   Context::onRemove(binding)
-//   Context::child(object)
-//   Context::get(object)
-function Context(meta, data, parent) {
-  this.meta = meta;
-  this.data = data;
-  this.parent = parent;
-}
-Context.prototype.onAdd = function(binding) {
-  this.meta.onAdd(binding);
-};
-Context.prototype.onRemove = function(binding) {
-  this.meta.onRemove(binding);
-};
-Context.prototype.child = function(value) {
-  var data = this.get(value);
-  return new Context(this.meta, data, this);
-};
-Context.prototype.get = function(value) {
-  return (value == null) ? this.data :
-    (value instanceof Expression) ? value.get(this) :
-    this._getProperty(value);
-};
-Context.prototype._getProperty = function(property) {
-  return (this.data && this.data.hasOwnProperty(property)) ?
-    this.data[property] :
-    this.parent && this.parent._getProperty(property);
-};
-function ContextMeta(options) {
-  this.onAdd = options.onAdd || noop;
-  this.onRemove = options.onRemove || noop;
 }
 
 

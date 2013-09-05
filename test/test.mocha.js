@@ -288,12 +288,12 @@ describe('Binding updates', function() {
   });
 
   function getContext(data, bindings) {
-    var contextMeta = new saddle.ContextMeta({
+    var contextMeta = new expressions.ContextMeta({
       onAdd: function(binding) {
         bindings && bindings.push(binding);
       }
     });
-    return new saddle.Context(contextMeta, data);
+    return new expressions.Context(contextMeta, data);
   }
 
   function render(template, data) {
@@ -307,7 +307,7 @@ describe('Binding updates', function() {
 
   it('updates a single TextNode', function() {
     var template = new saddle.Template([
-      new saddle.DynamicText(new saddle.Expression('text'))
+      new saddle.DynamicText(new expressions.Expression('text'))
     ]);
     var bindings = render(template);
     expect(bindings.length).equal(1);
@@ -319,8 +319,8 @@ describe('Binding updates', function() {
 
   it('updates sibling TextNodes', function() {
     var template = new saddle.Template([
-      new saddle.DynamicText(new saddle.Expression('first'))
-    , new saddle.DynamicText(new saddle.Expression('second'))
+      new saddle.DynamicText(new expressions.Expression('first'))
+    , new saddle.DynamicText(new expressions.Expression('second'))
     ]);
     var bindings = render(template, {second: 2});
     expect(bindings.length).equal(2);
@@ -334,7 +334,7 @@ describe('Binding updates', function() {
 
   it('updates a CommentNode', function() {
     var template = new saddle.Template([
-      new saddle.DynamicComment(new saddle.Expression('comment'))
+      new saddle.DynamicComment(new expressions.Expression('comment'))
     ]);
     var bindings = render(template, {comment: 'Hi'});
     expect(bindings.length).equal(1);
@@ -348,7 +348,7 @@ describe('Binding updates', function() {
     var template = new saddle.Template([
       new saddle.Element('div', new saddle.AttributesMap({
         'class': new saddle.Attribute('message')
-      , 'data-greeting': new saddle.DynamicAttribute('greeting')
+      , 'data-greeting': new saddle.DynamicAttribute(new expressions.Expression('greeting'))
       }))
     ]);
     var bindings = render(template);
@@ -374,11 +374,11 @@ describe('Binding updates', function() {
 
   it('updates a Block', function() {
     var template = new saddle.Template([
-      new saddle.Block(new saddle.Expression('author'), [
+      new saddle.Block(new expressions.Expression('author'), [
         new saddle.Element('h3', null, [
-          new saddle.DynamicText(new saddle.Expression('name'))
+          new saddle.DynamicText(new expressions.Expression('name'))
         ])
-      , new saddle.DynamicText(new saddle.Expression('name'))
+      , new saddle.DynamicText(new expressions.Expression('name'))
       ])
     ]);
     var bindings = render(template);
@@ -409,7 +409,7 @@ describe('Binding updates', function() {
   it('updates a single condition ConditionalBlock', function() {
     var template = new saddle.Template([
       new saddle.ConditionalBlock([
-        new saddle.Expression('show')
+        new expressions.Expression('show')
       ], [
         [new saddle.Text('shown')]
       ])
@@ -430,11 +430,11 @@ describe('Binding updates', function() {
   it('updates a multi-condition ConditionalBlock', function() {
     var template = new saddle.Template([
       new saddle.ConditionalBlock([
-        new saddle.Expression('primary')
-      , new saddle.Expression('alternate')
-      , new saddle.ElseExpression()
+        new expressions.Expression('primary')
+      , new expressions.Expression('alternate')
+      , new expressions.ElseExpression()
       ], [
-        [new saddle.DynamicText(new saddle.Expression())]
+        [new saddle.DynamicText(new expressions.Expression())]
       , []
       , [new saddle.Text('else')]
       ])
@@ -458,8 +458,8 @@ describe('Binding updates', function() {
 
   it('updates an each of text', function() {
     var template = new saddle.Template([
-      new saddle.EachBlock(new saddle.Expression('items'), [
-        new saddle.DynamicText(new saddle.Expression())
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression())
       ])
     ]);
     var bindings = render(template);
@@ -485,8 +485,8 @@ describe('Binding updates', function() {
 
   it('updates an each with an else', function() {
     var template = new saddle.Template([
-      new saddle.EachBlock(new saddle.Expression('items'), [
-        new saddle.DynamicText(new saddle.Expression('name'))
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
       ], [
         new saddle.Text('else')
       ])
@@ -518,8 +518,8 @@ describe('Binding updates', function() {
 
   it('inserts in an each', function() {
     var template = new saddle.Template([
-      new saddle.EachBlock(new saddle.Expression('items'), [
-        new saddle.DynamicText(new saddle.Expression('name'))
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
       ])
     ]);
     var binding = render(template).pop();
@@ -539,8 +539,8 @@ describe('Binding updates', function() {
 
   it('removes in an each', function() {
     var template = new saddle.Template([
-      new saddle.EachBlock(new saddle.Expression('items'), [
-        new saddle.DynamicText(new saddle.Expression('name'))
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
       ])
     ]);
     var data = {items: [
@@ -561,8 +561,8 @@ describe('Binding updates', function() {
 
   it('moves in an each', function() {
     var template = new saddle.Template([
-      new saddle.EachBlock(new saddle.Expression('items'), [
-        new saddle.DynamicText(new saddle.Expression('name'))
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
       ])
     ]);
     var data = {items: [
@@ -583,11 +583,11 @@ describe('Binding updates', function() {
 
   it('insert, move, and remove with multiple node items', function() {
     var template = new saddle.Template([
-      new saddle.EachBlock(new saddle.Expression('items'), [
+      new saddle.EachBlock(new expressions.Expression('items'), [
         new saddle.Element('h3', null, [
-          new saddle.DynamicText(new saddle.Expression('title'))
+          new saddle.DynamicText(new expressions.Expression('title'))
         ])
-      , new saddle.DynamicText(new saddle.Expression('text'))
+      , new saddle.DynamicText(new expressions.Expression('text'))
       ])
     ]);
     var data = {items: [
