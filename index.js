@@ -88,7 +88,7 @@ module.exports = {
 function Template(contents) {
   this.contents = contents;
 }
-Template.prototype.getHtml = function(context) {
+Template.prototype.get = function(context) {
   return contentsHtml(this.contents, context);
 };
 Template.prototype.getFragment = function(context, binding) {
@@ -104,7 +104,7 @@ function Text(data) {
   this.data = data;
 }
 Text.prototype = new Template();
-Text.prototype.getHtml = function() {
+Text.prototype.get = function() {
   return this.data;
 };
 Text.prototype.appendTo = function(parent) {
@@ -116,7 +116,7 @@ function DynamicText(expression) {
   this.expression = expression;
 }
 DynamicText.prototype = new Template();
-DynamicText.prototype.getHtml = function(context) {
+DynamicText.prototype.get = function(context) {
   return this.expression.get(context) || '';
 };
 DynamicText.prototype.appendTo = function(parent, context) {
@@ -133,7 +133,7 @@ function Comment(data) {
   this.data = data;
 }
 Comment.prototype = new Template();
-Comment.prototype.getHtml = function() {
+Comment.prototype.get = function() {
   return '<!--' + this.data + '-->';
 };
 Comment.prototype.appendTo = function(parent) {
@@ -145,7 +145,7 @@ function DynamicComment(expression) {
   this.expression = expression;
 }
 DynamicComment.prototype = new Template();
-DynamicComment.prototype.getHtml = function(context) {
+DynamicComment.prototype.get = function(context) {
   return '<!--' + (this.expression.get(context) || '') + '-->';
 };
 DynamicComment.prototype.appendTo = function(parent, context) {
@@ -161,17 +161,18 @@ DynamicComment.prototype.update = function(context, binding) {
 function Attribute(data) {
   this.data = data;
 }
-Attribute.prototype.getHtml = Attribute.prototype.get = function(context) {
+Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
 
 function DynamicAttribute(expression) {
+  // In attributes, expression may be an instance of Expression or Template
   this.expression = expression;
 }
-DynamicAttribute.prototype.getHtml = function(context) {
+DynamicAttribute.prototype.get = function(context) {
   return this.expression.get(context);
 };
-DynamicAttribute.prototype.get = function(context, element, name) {
+DynamicAttribute.prototype.getBound = function(context, element, name) {
   context.onAdd(new AttributeBinding(this, context, element, name));
   return this.expression.get(context);
 };
@@ -200,10 +201,10 @@ function Element(tag, attributes, contents) {
   this.isVoid = VOID_ELEMENTS[tag.toLowerCase()];
 }
 Element.prototype = new Template();
-Element.prototype.getHtml = function(context) {
+Element.prototype.get = function(context) {
   var tagItems = [this.tag];
   for (var key in this.attributes) {
-    var value = this.attributes[key].getHtml(context);
+    var value = this.attributes[key].get(context);
     if (value === true) {
       tagItems.push(key);
     } else if (value !== false && value != null) {
@@ -221,7 +222,7 @@ Element.prototype.getHtml = function(context) {
 Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tag);
   for (var key in this.attributes) {
-    var value = this.attributes[key].get(context, element, key);
+    var value = this.attributes[key].getBound(context, element, key);
     var propertyName = CREATE_PROPERTIES[key];
     if (propertyName) {
       element[propertyName] = value;
@@ -241,7 +242,7 @@ function Block(expression, contents) {
   this.contents = contents;
 }
 Block.prototype = new Template();
-Block.prototype.getHtml = function(context) {
+Block.prototype.get = function(context) {
   var blockContext = context.child(this.expression);
   return contentsHtml(this.contents, blockContext);
 };
@@ -269,7 +270,7 @@ function ConditionalBlock(expressions, contents) {
   this.contents = contents;
 }
 ConditionalBlock.prototype = new Block();
-ConditionalBlock.prototype.getHtml = function(context) {
+ConditionalBlock.prototype.get = function(context) {
   var html = '';
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
@@ -302,7 +303,7 @@ function EachBlock(expression, contents, elseContents) {
   this.elseContents = elseContents;
 }
 EachBlock.prototype = new Block();
-EachBlock.prototype.getHtml = function(context) {
+EachBlock.prototype.get = function(context) {
   var items = this.expression.get(context);
   var listContext = context.child(this.expression);
   if (items && items.length) {
@@ -429,7 +430,7 @@ function appendContents(parent, contents, context) {
 function contentsHtml(contents, context) {
   var html = '';
   for (var i = 0, len = contents.length; i < len; i++) {
-    html += contents[i].getHtml(context);
+    html += contents[i].get(context);
   }
   return html;
 }

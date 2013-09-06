@@ -8,6 +8,7 @@
 var module = {};
 </script>
 <script src="../index.js"></script>
+<script src="expressions.js"></script>
 <script>
 
 var _this = new Expression();
@@ -44,7 +45,7 @@ var template = new Block(_this, [
   , new EachBlock(new Expression('comments'), [
       new Element('h2', null, [
         new Text('By ')
-      , new Block('nonsense', [
+      , new Block(new Expression('nonsense'), [
           new DynamicText(new Expression('author'))
         ])
       ])
@@ -98,7 +99,7 @@ var binding;
 window.onload = function() {
   var start = +new Date
   var el = document.getElementById('entry');
-  var html = template.getHtml(context);
+  var html = template.get(context);
   now = +new Date; console.log(new Date - start); start = now;
   el.innerHTML = html;
   now = +new Date; console.log(new Date - start); start = now;
@@ -114,7 +115,7 @@ function bench() {
   var j = 20;
   var times = [];
   var el = document.getElementById('entry');
-  var html = template.getHtml(context);
+  var html = template.get(context);
   run();
 
   function median(values) {
@@ -132,7 +133,7 @@ function bench() {
     while (i--) {
       binding.update(context);
 
-      // el.innerHTML = template.getHtml(context);
+      // el.innerHTML = template.get(context);
   
       // el.innerHTML = html
   

@@ -1,18 +1,44 @@
-describe('HTML rendering', function() {
-  testRenderedHtml(function test(options) {
-    var html = options.template.getHtml();
-    expect(html).equal(options.html);
+describe('Static rendering', function() {
+
+  describe('HTML', function() {
+    testStaticRendering(function test(options) {
+      var html = options.template.get();
+      expect(html).equal(options.html);
+    });
   });
+
+  describe('Fragment', function() {
+    testStaticRendering(function test(options) {
+      var fragment = options.template.getFragment();
+      options.fragment(fragment);
+    });
+  });
+
 });
 
-describe('Fragment rendering', function() {
-  testRenderedHtml(function test(options) {
-    var fragment = options.template.getFragment();
-    options.fragment(fragment);
+describe('Dynamic rendering', function() {
+
+  var context = getContext({
+    show: true
   });
+
+  describe('HTML', function() {
+    testDynamicRendering(function test(options) {
+      var html = options.template.get(context);
+      expect(html).equal(options.html);
+    });
+  });
+
+  describe('Fragment', function() {
+    testDynamicRendering(function test(options) {
+      var fragment = options.template.getFragment(context);
+      options.fragment(fragment);
+    });
+  });
+
 });
 
-function testRenderedHtml(test) {
+function testStaticRendering(test) {
   it('renders an empty div', function() {
     test({
       template: new saddle.Element('div')
@@ -197,6 +223,7 @@ function testRenderedHtml(test) {
       }
     });
   });
+
   it('renders <input> checked attribute: false', function() {
     test({
       template: new saddle.Element('input', new saddle.AttributesMap({
@@ -211,6 +238,32 @@ function testRenderedHtml(test) {
   });
 }
 
+function testDynamicRendering(test) {
+  // TODO: More tests
+
+  it('renders a template as an attribute expression', function() {
+    test({
+      template: new saddle.Element('div', new saddle.AttributesMap({
+        'class': new saddle.DynamicAttribute(new saddle.Template([
+          new saddle.Text('dropdown')
+        , new saddle.ConditionalBlock([
+            new expressions.Expression('show')
+          ], [
+            [new saddle.Text(' show')]
+          ])
+        ]))
+      }))
+    , html: '<div class="dropdown show"></div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+        expect(fragment.childNodes[0].className).equal('dropdown show');
+      }
+    });
+  });
+
+}
+
 describe('replaceBindings', function() {
 
   after(function() {
@@ -220,7 +273,7 @@ describe('replaceBindings', function() {
 
   function renderAndReplace(template) {
     var fixture = document.getElementById('fixture');
-    fixture.innerHTML = template.getHtml();
+    fixture.innerHTML = template.get();
     var fragment = template.getFragment();
     saddle.replaceBindings(fragment, fixture);
   }
@@ -286,15 +339,6 @@ describe('Binding updates', function() {
   after(function() {
     fixture.innerHTML = '';
   });
-
-  function getContext(data, bindings) {
-    var contextMeta = new expressions.ContextMeta({
-      onAdd: function(binding) {
-        bindings && bindings.push(binding);
-      }
-    });
-    return new expressions.Context(contextMeta, data);
-  }
 
   function render(template, data) {
     fixture.innerHTML = '';
@@ -613,6 +657,15 @@ describe('Binding updates', function() {
   it('removes all items from a list with an else');
 
 });
+
+function getContext(data, bindings) {
+  var contextMeta = new expressions.ContextMeta({
+    onAdd: function(binding) {
+      bindings && bindings.push(binding);
+    }
+  });
+  return new expressions.Context(contextMeta, data);
+}
 
 // IE <=8 return comments for Node.children
 function getChildren(node) {
