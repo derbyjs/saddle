@@ -99,6 +99,9 @@ Template.prototype.getFragment = function(context, binding) {
 Template.prototype.appendTo = function(parent, context) {
   appendContent(parent, this.content, context);
 };
+Template.prototype.stringify = function(value) {
+  return (value == null) ? '' : value + '';
+};
 
 function Text(data) {
   this.data = data;
@@ -117,16 +120,16 @@ function DynamicText(expression) {
 }
 DynamicText.prototype = new Template();
 DynamicText.prototype.get = function(context) {
-  return this.expression.get(context) || '';
+  return this.stringify(this.expression.get(context));
 };
 DynamicText.prototype.appendTo = function(parent, context) {
-  var data = this.expression.get(context) || '';
+  var data = this.stringify(this.expression.get(context));
   var node = document.createTextNode(data);
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, context, node));
 };
 DynamicText.prototype.update = function(context, binding) {
-  binding.node.data = this.expression.get(context) || '';
+  binding.node.data = this.stringify(this.expression.get(context));
 };
 
 function Comment(data) {
@@ -146,16 +149,16 @@ function DynamicComment(expression) {
 }
 DynamicComment.prototype = new Template();
 DynamicComment.prototype.get = function(context) {
-  return '<!--' + (this.expression.get(context) || '') + '-->';
+  return '<!--' + this.stringify(this.expression.get(context)) + '-->';
 };
 DynamicComment.prototype.appendTo = function(parent, context) {
-  var data = this.expression.get(context) || '';
+  var data = this.stringify(this.expression.get(context));
   var node = document.createComment(data);
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, context, node));
 };
 DynamicComment.prototype.update = function(context, binding) {
-  binding.node.data = this.expression.get(context) || '';
+  binding.node.data = this.stringify(this.expression.get(context));
 };
 
 function Attribute(data) {
