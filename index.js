@@ -85,11 +85,11 @@ module.exports = {
 , replaceBindings: replaceBindings
 };
 
-function Template(contents) {
-  this.contents = contents;
+function Template(content) {
+  this.content = content;
 }
 Template.prototype.get = function(context) {
-  return contentsHtml(this.contents, context);
+  return contentHtml(this.content, context);
 };
 Template.prototype.getFragment = function(context, binding) {
   var fragment = document.createDocumentFragment();
@@ -97,7 +97,7 @@ Template.prototype.getFragment = function(context, binding) {
   return fragment;
 };
 Template.prototype.appendTo = function(parent, context) {
-  appendContents(parent, this.contents, context);
+  appendContent(parent, this.content, context);
 };
 
 function Text(data) {
@@ -194,10 +194,10 @@ function AttributesMap(object) {
   if (object) mergeInto(object, this);
 }
 
-function Element(tag, attributes, contents) {
+function Element(tag, attributes, content) {
   this.tag = tag;
   this.attributes = attributes;
-  this.contents = contents;
+  this.content = content;
   this.isVoid = VOID_ELEMENTS[tag.toLowerCase()];
 }
 Element.prototype = new Template();
@@ -213,8 +213,8 @@ Element.prototype.get = function(context) {
   }
   var startTag = '<' + tagItems.join(' ') + '>';
   var endTag = '</' + this.tag + '>';
-  if (this.contents) {
-    var inner = contentsHtml(this.contents, context);
+  if (this.content) {
+    var inner = contentHtml(this.content, context);
     return startTag + inner + endTag;
   }
   return (this.isVoid) ? startTag : startTag + endTag;
@@ -232,26 +232,26 @@ Element.prototype.appendTo = function(parent, context) {
       element.setAttribute(key, value);
     }
   }
-  if (this.contents) appendContents(element, this.contents, context);
+  if (this.content) appendContent(element, this.content, context);
   parent.appendChild(element);
 };
 
-function Block(expression, contents) {
+function Block(expression, content) {
   this.expression = expression;
   this.ending = '/' + expression;
-  this.contents = contents;
+  this.content = content;
 }
 Block.prototype = new Template();
 Block.prototype.get = function(context) {
   var blockContext = context.child(this.expression);
-  return contentsHtml(this.contents, blockContext);
+  return contentHtml(this.content, blockContext);
 };
 Block.prototype.appendTo = function(parent, context, binding) {
   var blockContext = context.child(this.expression);
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
-  appendContents(parent, this.contents, blockContext);
+  appendContent(parent, this.content, blockContext);
   parent.appendChild(end);
   updateRange(context, binding, this, start, end);
 };
@@ -275,7 +275,7 @@ ConditionalBlock.prototype.get = function(context) {
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
-      html += contentsHtml(this.contents[i], context.child(expression));
+      html += contentHtml(this.contents[i], context.child(expression));
       break;
     }
   }
@@ -288,7 +288,7 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
-      appendContents(parent, this.contents[i], context.child(expression));
+      appendContent(parent, this.contents[i], context.child(expression));
       break;
     }
   }
@@ -296,11 +296,11 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   updateRange(context, binding, this, start, end);
 };
 
-function EachBlock(expression, contents, elseContents) {
+function EachBlock(expression, content, elseContent) {
   this.expression = expression;
   this.ending = '/' + expression;
-  this.contents = contents;
-  this.elseContents = elseContents;
+  this.content = content;
+  this.elseContent = elseContent;
 }
 EachBlock.prototype = new Block();
 EachBlock.prototype.get = function(context) {
@@ -310,11 +310,11 @@ EachBlock.prototype.get = function(context) {
     var html = '';
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.eachChild(i);
-      html += contentsHtml(this.contents, itemContext);
+      html += contentHtml(this.content, itemContext);
     }
     return html;
-  } else if (this.elseContents) {
-    return contentsHtml(this.elseContents, listContext);
+  } else if (this.elseContent) {
+    return contentHtml(this.elseContent, listContext);
   }
   return '';
 };
@@ -329,8 +329,8 @@ EachBlock.prototype.appendTo = function(parent, context, binding) {
       var itemContext = listContext.eachChild(i);
       this.appendItemTo(parent, itemContext);
     }
-  } else if (this.elseContents) {
-    appendContents(parent, this.elseContents, listContext);
+  } else if (this.elseContent) {
+    appendContent(parent, this.elseContent, listContext);
   }
   parent.appendChild(end);
   updateRange(context, binding, this, start, end);
@@ -338,7 +338,7 @@ EachBlock.prototype.appendTo = function(parent, context, binding) {
 EachBlock.prototype.appendItemTo = function(parent, context, binding) {
   var before = parent.lastChild;
   var start, end;
-  appendContents(parent, this.contents, context);
+  appendContent(parent, this.content, context);
   if (before === parent.lastChild) {
     start = end = document.createComment('empty');
     parent.appendChild(start);
@@ -422,15 +422,15 @@ function updateRange(context, binding, template, start, end, isItem) {
   }
 }
 
-function appendContents(parent, contents, context) {
-  for (var i = 0, len = contents.length; i < len; i++) {
-    contents[i].appendTo(parent, context);
+function appendContent(parent, content, context) {
+  for (var i = 0, len = content.length; i < len; i++) {
+    content[i].appendTo(parent, context);
   }
 }
-function contentsHtml(contents, context) {
+function contentHtml(content, context) {
   var html = '';
-  for (var i = 0, len = contents.length; i < len; i++) {
-    html += contents[i].get(context);
+  for (var i = 0, len = content.length; i < len; i++) {
+    html += content[i].get(context);
   }
   return html;
 }
