@@ -88,8 +88,8 @@ module.exports = {
 function Template(content) {
   this.content = content;
 }
-Template.prototype.get = function(context) {
-  return contentHtml(this.content, context);
+Template.prototype.get = function(context, unescaped) {
+  return contentHtml(this.content, context, unescaped);
 };
 Template.prototype.getFragment = function(context, binding) {
   var fragment = document.createDocumentFragment();
@@ -105,10 +105,11 @@ Template.prototype.stringify = function(value) {
 
 function Text(data) {
   this.data = data;
+  this.escaped = escapeHtml(data);
 }
 Text.prototype = new Template();
-Text.prototype.get = function() {
-  return this.data;
+Text.prototype.get = function(context, unescaped) {
+  return (unescaped) ? this.data : this.escaped;
 };
 Text.prototype.appendTo = function(parent) {
   var node = document.createTextNode(this.data);
@@ -119,11 +120,21 @@ function DynamicText(expression) {
   this.expression = expression;
 }
 DynamicText.prototype = new Template();
-DynamicText.prototype.get = function(context) {
-  return this.stringify(this.expression.get(context));
+DynamicText.prototype.get = function(context, unescaped) {
+  var value = this.expression.get(context);
+  if (value instanceof Template) {
+    return value.get(context, unescaped);
+  }
+  var data = this.stringify(value);
+  return (unescaped) ? data : escapeHtml(data);
 };
 DynamicText.prototype.appendTo = function(parent, context) {
-  var data = this.stringify(this.expression.get(context));
+  var value = this.expression.get(context);
+  if (value instanceof Template) {
+    value.appendTo(parent, context);
+    return;
+  }
+  var data = this.stringify(value);
   var node = document.createTextNode(data);
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, context, node));
@@ -173,14 +184,17 @@ function DynamicAttribute(expression) {
   this.expression = expression;
 }
 DynamicAttribute.prototype.get = function(context) {
-  return this.expression.get(context);
+  var unescaped = true;
+  return this.expression.get(context, unescaped);
 };
 DynamicAttribute.prototype.getBound = function(context, element, name) {
   context.onAdd(new AttributeBinding(this, context, element, name));
-  return this.expression.get(context);
+  var unescaped = true;
+  return this.expression.get(context, unescaped);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
-  var value = this.expression.get(context);
+  var unescaped = true;
+  var value = this.expression.get(context, unescaped);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     binding.element[propertyName] = value;
@@ -211,7 +225,7 @@ Element.prototype.get = function(context) {
     if (value === true) {
       tagItems.push(key);
     } else if (value !== false && value != null) {
-      tagItems.push(key + '="' + value + '"');
+      tagItems.push(key + '="' + escapeAttribute(value) + '"');
     }
   }
   var startTag = '<' + tagItems.join(' ') + '>';
@@ -245,9 +259,9 @@ function Block(expression, content) {
   this.content = content;
 }
 Block.prototype = new Template();
-Block.prototype.get = function(context) {
+Block.prototype.get = function(context, unescaped) {
   var blockContext = context.child(this.expression);
-  return contentHtml(this.content, blockContext);
+  return contentHtml(this.content, blockContext, unescaped);
 };
 Block.prototype.appendTo = function(parent, context, binding) {
   var blockContext = context.child(this.expression);
@@ -273,12 +287,13 @@ function ConditionalBlock(expressions, contents) {
   this.contents = contents;
 }
 ConditionalBlock.prototype = new Block();
-ConditionalBlock.prototype.get = function(context) {
+ConditionalBlock.prototype.get = function(context, unescaped) {
+  console.log('unescaped', unescaped)
   var html = '';
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
-      html += contentHtml(this.contents[i], context.child(expression));
+      html += contentHtml(this.contents[i], context.child(expression), unescaped);
       break;
     }
   }
@@ -306,18 +321,18 @@ function EachBlock(expression, content, elseContent) {
   this.elseContent = elseContent;
 }
 EachBlock.prototype = new Block();
-EachBlock.prototype.get = function(context) {
+EachBlock.prototype.get = function(context, unescaped) {
   var items = this.expression.get(context);
   var listContext = context.child(this.expression);
   if (items && items.length) {
     var html = '';
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.eachChild(i);
-      html += contentHtml(this.content, itemContext);
+      html += contentHtml(this.content, itemContext, unescaped);
     }
     return html;
   } else if (this.elseContent) {
-    return contentHtml(this.elseContent, listContext);
+    return contentHtml(this.elseContent, listContext, unescaped);
   }
   return '';
 };
@@ -430,10 +445,10 @@ function appendContent(parent, content, context) {
     content[i].appendTo(parent, context);
   }
 }
-function contentHtml(content, context) {
+function contentHtml(content, context, unescaped) {
   var html = '';
   for (var i = 0, len = content.length; i < len; i++) {
-    html += content[i].get(context);
+    html += content[i].get(context, unescaped);
   }
   return html;
 }
@@ -626,6 +641,18 @@ function mergeInto(from, to) {
   for (var key in from) {
     to[key] = from[key];
   }
+}
+
+function escapeHtml(string) {
+  return string.replace(/[&<]/g, function(match) {
+    return (match === '&') ? '&amp;' : '&lt;';
+  });
+}
+
+function escapeAttribute(string) {
+  return string.replace(/[&"]/g, function(match) {
+    return (match === '&') ? '&amp;' : '&quot;';
+  });
 }
 
 
