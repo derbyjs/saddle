@@ -179,22 +179,22 @@ Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
 
-function DynamicAttribute(expression) {
-  // In attributes, expression may be an instance of Expression or Template
-  this.expression = expression;
+function DynamicAttribute(template) {
+  // In attributes, template may be an instance of Template or Expression
+  this.template = template;
 }
 DynamicAttribute.prototype.get = function(context) {
   var unescaped = true;
-  return this.expression.get(context, unescaped);
+  return this.template.get(context, unescaped);
 };
 DynamicAttribute.prototype.getBound = function(context, element, name) {
   context.onAdd(new AttributeBinding(this, context, element, name));
   var unescaped = true;
-  return this.expression.get(context, unescaped);
+  return this.template.get(context, unescaped);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
   var unescaped = true;
-  var value = this.expression.get(context, unescaped);
+  var value = this.template.get(context, unescaped);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     binding.element[propertyName] = value;
@@ -288,7 +288,6 @@ function ConditionalBlock(expressions, contents) {
 }
 ConditionalBlock.prototype = new Block();
 ConditionalBlock.prototype.get = function(context, unescaped) {
-  console.log('unescaped', unescaped)
   var html = '';
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
