@@ -160,16 +160,18 @@ function DynamicComment(expression) {
 }
 DynamicComment.prototype = new Template();
 DynamicComment.prototype.get = function(context) {
-  return '<!--' + this.stringify(this.expression.get(context)) + '-->';
+  var value = getUnescapedValue(this.expression, context);
+  return '<!--' + this.stringify(value) + '-->';
 };
 DynamicComment.prototype.appendTo = function(parent, context) {
-  var data = this.stringify(this.expression.get(context));
-  var node = document.createComment(data);
+  var value = getUnescapedValue(this.expression, context);
+  var node = document.createComment(this.stringify(value));
   parent.appendChild(node);
   context.onAdd(new NodeBinding(this, context, node));
 };
 DynamicComment.prototype.update = function(context, binding) {
-  binding.node.data = this.stringify(this.expression.get(context));
+  var value = getUnescapedValue(this.expression, context);
+  binding.node.data = this.stringify(value);
 };
 
 function Attribute(data) {
@@ -184,17 +186,14 @@ function DynamicAttribute(template) {
   this.template = template;
 }
 DynamicAttribute.prototype.get = function(context) {
-  var unescaped = true;
-  return this.template.get(context, unescaped);
+  return getUnescapedValue(this.template, context);
 };
 DynamicAttribute.prototype.getBound = function(context, element, name) {
   context.onAdd(new AttributeBinding(this, context, element, name));
-  var unescaped = true;
-  return this.template.get(context, unescaped);
+  return getUnescapedValue(this.template, context);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
-  var unescaped = true;
-  var value = this.template.get(context, unescaped);
+  var value = getUnescapedValue(this.template, context);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     binding.element[propertyName] = value;
@@ -206,6 +205,15 @@ DynamicAttribute.prototype.update = function(context, binding) {
     binding.element.setAttribute(binding.name, value);
   }
 };
+
+function getUnescapedValue(expression, context) {
+  var unescaped = true;
+  var value = expression.get(context, unescaped);
+  while (value instanceof Template) {
+    value = value.get(context, unescaped);
+  }
+  return value;
+}
 
 function AttributesMap(object) {
   if (object) mergeInto(object, this);
