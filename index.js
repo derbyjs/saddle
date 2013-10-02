@@ -123,7 +123,10 @@ DynamicText.prototype = new Template();
 DynamicText.prototype.get = function(context, unescaped) {
   var value = this.expression.get(context);
   if (value instanceof Template) {
-    return value.get(context, unescaped);
+    do {
+      value = value.get(context, unescaped);
+    } while (value instanceof Template);
+    return value;
   }
   var data = this.stringify(value);
   return (unescaped) ? data : escapeHtml(data);
