@@ -659,11 +659,11 @@ describe('Binding updates', function() {
 });
 
 function getContext(data, bindings) {
-  var contextMeta = new expressions.ContextMeta({
-    onAdd: function(binding) {
+  var contextMeta = {
+    addBinding: function(binding) {
       bindings && bindings.push(binding);
     }
-  });
+  };
   return new expressions.Context(contextMeta, data);
 }
 

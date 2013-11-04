@@ -76,11 +76,11 @@ function removeBinding(binding) {
   delete bindings[binding.id];
   // console.log('remove', binding);
 }
-var meta = new ContextMeta({
-  onAdd: addBinding
-, onRemove: removeBinding
-});
-var context = new Context(meta, {
+var contextMeta = {
+  addBinding: addBinding
+, removeBinding: removeBinding
+};
+var context = new Context(contextMeta, {
   author: 'Alan Johnson'
 , body: 'I Love Saddle'
 , comments: [{

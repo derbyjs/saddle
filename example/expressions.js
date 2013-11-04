@@ -1,7 +1,6 @@
 module.exports = {
   Expression: Expression
 , ElseExpression: ElseExpression
-, ContextMeta: ContextMeta
 , Context: Context
 };
 
@@ -52,8 +51,8 @@ function templateTruthy(value) {
 // should be done in Expression object instantiation whenever possible.
 //
 // The required interface methods are:
-//   Context::onAdd(binding)
-//   Context::onRemove(binding)
+//   Context::addBinding(binding)
+//   Context::removeBinding(binding)
 //   Context::child(expression)
 //   Context::eachChild(index)
 function Context(meta, data, parent) {
@@ -61,11 +60,11 @@ function Context(meta, data, parent) {
   this.data = data;
   this.parent = parent;
 }
-Context.prototype.onAdd = function(binding) {
-  this.meta.onAdd(binding);
+Context.prototype.addBinding = function(binding) {
+  this.meta.addBinding(binding);
 };
-Context.prototype.onRemove = function(binding) {
-  this.meta.onRemove(binding);
+Context.prototype.removeBinding = function(binding) {
+  this.meta.removeBinding(binding);
 };
 Context.prototype.child = function(expression) {
   var data = expression.get(this);
@@ -80,7 +79,3 @@ Context.prototype._get = function(property) {
     this.data[property] :
     this.parent && this.parent._get(property);
 };
-function ContextMeta(options) {
-  this.onAdd = options.onAdd || noop;
-  this.onRemove = options.onRemove || noop;
-}

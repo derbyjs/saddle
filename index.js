@@ -140,7 +140,7 @@ DynamicText.prototype.appendTo = function(parent, context) {
   var data = this.stringify(value);
   var node = document.createTextNode(data);
   parent.appendChild(node);
-  context.onAdd(new NodeBinding(this, context, node));
+  context.addBinding(new NodeBinding(this, context, node));
 };
 DynamicText.prototype.update = function(context, binding) {
   binding.node.data = this.stringify(this.expression.get(context));
@@ -170,7 +170,7 @@ DynamicComment.prototype.appendTo = function(parent, context) {
   var value = getUnescapedValue(this.expression, context);
   var node = document.createComment(this.stringify(value));
   parent.appendChild(node);
-  context.onAdd(new NodeBinding(this, context, node));
+  context.addBinding(new NodeBinding(this, context, node));
 };
 DynamicComment.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
@@ -192,7 +192,7 @@ DynamicAttribute.prototype.get = function(context) {
   return getUnescapedValue(this.template, context);
 };
 DynamicAttribute.prototype.getBound = function(context, element, name) {
-  context.onAdd(new AttributeBinding(this, context, element, name));
+  context.addBinding(new AttributeBinding(this, context, element, name));
   return getUnescapedValue(this.template, context);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
@@ -446,7 +446,7 @@ function updateRange(context, binding, template, start, end, isItem) {
     setNodeProperty(start, '$bindStart', binding);
     setNodeProperty(end, '$bindEnd', binding);
   } else {
-    context.onAdd(new RangeBinding(template, context, start, end, isItem));
+    context.addBinding(new RangeBinding(template, context, start, end, isItem));
   }
 }
 
@@ -484,13 +484,13 @@ function replaceRange(context, start, end, fragment, binding) {
 }
 function emitRemoved(context, node, ignore) {
   var binding = node.$bindNode;
-  if (binding && binding !== ignore) context.onRemove(binding);
+  if (binding && binding !== ignore) context.removeBinding(binding);
   binding = node.$bindStart;
-  if (binding && binding !== ignore) context.onRemove(binding);
+  if (binding && binding !== ignore) context.removeBinding(binding);
   var attributes = node.$bindAttributes;
   if (attributes) {
     for (var key in attributes) {
-      context.onRemove(attributes[key]);
+      context.removeBinding(attributes[key]);
     }
   }
   for (node = node.firstChild; node; node = node.nextSibling) {
