@@ -222,10 +222,11 @@ function AttributesMap(object) {
   if (object) mergeInto(object, this);
 }
 
-function Element(tag, attributes, content) {
+function Element(tag, attributes, content, onCreate) {
   this.tag = tag;
   this.attributes = attributes;
   this.content = content;
+  this.onCreate = onCreate;
   this.isVoid = VOID_ELEMENTS[tag.toLowerCase()];
 }
 Element.prototype = new Template();
@@ -249,6 +250,11 @@ Element.prototype.get = function(context) {
 };
 Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tag);
+  if (this.onCreate) {
+    for (var i = 0, len = this.onCreate.length; i < len; i++) {
+      this.onCreate[i](element);
+    }
+  }
   for (var key in this.attributes) {
     var value = this.attributes[key].getBound(context, element, key);
     var propertyName = CREATE_PROPERTIES[key];
