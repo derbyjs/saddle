@@ -81,8 +81,6 @@ module.exports = {
 , NodeBinding: NodeBinding
 , AttributeBinding: AttributeBinding
 , RangeBinding: RangeBinding
-
-, replaceBindings: replaceBindings
 };
 
 function Template(content) {
@@ -730,111 +728,6 @@ RangeBinding.prototype.remove = function(index, howMany) {
 RangeBinding.prototype.move = function(from, to, howMany) {
   this.template.move(this.context, this, from, to, howMany);
 };
-
-
-//// HTML page initialization ////
-
-function replaceBindings(fragment, mirror) {
-  var node = fragment.firstChild;
-  var mirrorNode = mirror.firstChild;
-  var nextMirrorNode;
-  do {
-    nextMirrorNode = mirrorNode && mirrorNode.nextSibling;
-
-    // Split or create empty TextNodes as needed
-    if (node.nodeType === 3) {
-      if (mirrorNode && mirrorNode.nodeType === 3) {
-        if (node.data !== mirrorNode.data) {
-          nextMirrorNode = splitData(mirrorNode, node.data.length);
-        }
-      } else {
-        nextMirrorNode = mirrorNode;
-        mirrorNode = document.createTextNode('');
-        // Also works if nextMirrorNode is null
-        mirror.insertBefore(mirrorNode, nextMirrorNode);
-      }
-
-    // Create missing CommentNodes. Comments are used as DOM location markers
-    // when rendering bindings, but not when rendering HTML. In addition, old
-    // versions of IE fail to create some CommentNodes when parsing HTML
-    } else if (node.nodeType === 8) {
-      if (
-        !mirrorNode ||
-        (mirrorNode.nodeType !== 8) ||
-        (node.data !== mirrorNode.data)
-      ) {
-        nextMirrorNode = mirrorNode;
-        mirrorNode = node.cloneNode(false);
-        mirror.insertBefore(mirrorNode, nextMirrorNode);
-      }
-    }
-
-    // Verify that the nodes are equivalent
-    if (mismatchedNodes(node, mirrorNode)) {
-      throw new Error('Attaching bindings failed, because HTML structure ' +
-        'does not match client rendering'
-      );
-    }
-
-    // Move bindings on the fragment to the corresponding node on the mirror
-    replaceNodeBindings(node, mirrorNode);
-
-    // Recursively traverse within Elements
-    if (node.nodeType === 1 && node.hasChildNodes()) {
-      replaceBindings(node, mirrorNode);
-    }
-
-    mirrorNode = nextMirrorNode;
-    node = node.nextSibling;
-  } while (node);
-}
-
-function attachError() {
-  return new Error('Attaching bindings failed, because HTML structure ' +
-    'does not match client rendering'
-  );
-}
-
-function mismatchedNodes(node, mirrorNode) {
-  // Check that nodes are of matching types
-  if (!node || !mirrorNode) return true;
-  var type = node.nodeType;
-  if (type !== mirrorNode.nodeType) return true;
-
-  // Check that elements are of the same element type
-  if (type === 1) {
-    if (node.tagName !== mirrorNode.tagName) return true;
-
-  // Check that TextNodes and CommentNodes have the same content
-  } else if (type === 3 || type === 8) {
-    if (node.data !== mirrorNode.data) return true;
-  }
-}
-
-function replaceNodeBindings(node, mirrorNode) {
-  var binding = node.$bindNode;
-  if (binding) {
-    binding.node = mirrorNode;
-    setNodeProperty(node, '$bindNode', binding);
-  }
-  binding = node.$bindStart;
-  if (binding) {
-    binding.start = mirrorNode;
-    setNodeProperty(mirrorNode, '$bindStart', binding);
-  }
-  binding = node.$bindEnd;
-  if (binding) {
-    binding.end = mirrorNode;
-    setNodeProperty(mirrorNode, '$bindEnd', binding);
-  }
-  var attributes = node.$bindAttributes;
-  if (attributes) {
-    for (var key in attributes) {
-      attributes[key].element = mirrorNode;
-    }
-    mirrorNode.$bindAttributes = attributes;
-  }
-}
 
 
 //// Utility functions ////
