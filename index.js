@@ -119,29 +119,7 @@ Text.prototype.appendTo = function(parent) {
   parent.appendChild(node);
 };
 Text.prototype.attachTo = function(parent, node) {
-  if (!node) {
-    this.appendTo(parent);
-    return;
-  }
-  if (node.nodeType === 3) {
-    // Proceed if nodes already match
-    if (node.data === this.data) {
-      return node.nextSibling;
-    }
-    // Split adjacent text nodes that would have been merged together in HTML
-    var nextNode = splitData(node, this.data.length);
-    if (node.data !== this.data) {
-      throw attachError();
-    }
-    return nextNode;
-  }
-  // An empty text node might not be created at the end of some text
-  if (this.data === '') {
-    var newNode = document.createTextNode('');
-    parent.insertBefore(newNode, node);
-    return node;
-  }
-  throw attachError();
+  return attachText(parent, node, this.data, this);
 };
 
 function DynamicText(expression) {
@@ -168,11 +146,50 @@ DynamicText.prototype.appendTo = function(parent, context) {
   var data = this.stringify(value);
   var node = document.createTextNode(data);
   parent.appendChild(node);
-  context.addBinding(new NodeBinding(this, context, node));
+  addNodeBinding(this, context, node);
+};
+DynamicText.prototype.attachTo = function(parent, node, context) {
+  var value = this.expression.get(context);
+  if (value instanceof Template) {
+    return value.attachTo(parent, node, context);
+  }
+  var data = this.stringify(value);
+  return attachText(parent, node, data, this, context);
 };
 DynamicText.prototype.update = function(context, binding) {
   binding.node.data = this.stringify(this.expression.get(context));
 };
+
+function attachText(parent, node, data, template, context) {
+  if (!node) {
+    var newNode = document.createTextNode(data);
+    parent.appendChild(newNode);
+    addNodeBinding(template, context, newNode);
+    return;
+  }
+  if (node.nodeType === 3) {
+    // Proceed if nodes already match
+    if (node.data === data) {
+      addNodeBinding(template, context, node);
+      return node.nextSibling;
+    }
+    // Split adjacent text nodes that would have been merged together in HTML
+    var nextNode = splitData(node, data.length);
+    if (node.data !== data) {
+      throw attachError();
+    }
+    addNodeBinding(template, context, node);
+    return nextNode;
+  }
+  // An empty text node might not be created at the end of some text
+  if (data === '') {
+    var newNode = document.createTextNode('');
+    parent.insertBefore(newNode, node);
+    addNodeBinding(template, context, newNode);
+    return node;
+  }
+  throw attachError();
+}
 
 function Comment(data) {
   this.data = data;
@@ -186,18 +203,7 @@ Comment.prototype.appendTo = function(parent) {
   parent.appendChild(node);
 };
 Comment.prototype.attachTo = function(parent, node) {
-  // Sometimes IE fails to create Comment nodes from HTML or innerHTML.
-  // This is an issue inside of <select> elements, for example.
-  if (!node || node.nodeType !== 8) {
-    var newNode = document.createComment(this.data);
-    parent.insertBefore(newNode, node);
-    return node;
-  }
-  // Proceed if nodes already match
-  if (node.data === this.data) {
-    return node.nextSibling;
-  }
-  throw attachError();
+  return attachComment(parent, node, this.data);
 };
 
 function DynamicComment(expression) {
@@ -206,18 +212,47 @@ function DynamicComment(expression) {
 DynamicComment.prototype = new Template();
 DynamicComment.prototype.get = function(context) {
   var value = getUnescapedValue(this.expression, context);
-  return '<!--' + this.stringify(value) + '-->';
+  var data = this.stringify(value);
+  return '<!--' + data + '-->';
 };
 DynamicComment.prototype.appendTo = function(parent, context) {
   var value = getUnescapedValue(this.expression, context);
-  var node = document.createComment(this.stringify(value));
+  var data = this.stringify(value);
+  var node = document.createComment(data);
   parent.appendChild(node);
-  context.addBinding(new NodeBinding(this, context, node));
+  addNodeBinding(this, context, node);
+};
+DynamicComment.prototype.attachTo = function(parent, node, context) {
+  var value = getUnescapedValue(this.expression, context);
+  var data = this.stringify(value);
+  return attachComment(parent, node, data, this, context);
 };
 DynamicComment.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
   binding.node.data = this.stringify(value);
 };
+
+function attachComment(parent, node, data, template, context) {
+  // Sometimes IE fails to create Comment nodes from HTML or innerHTML.
+  // This is an issue inside of <select> elements, for example.
+  if (!node || node.nodeType !== 8) {
+    var newNode = document.createComment(data);
+    parent.insertBefore(newNode, node);
+    addNodeBinding(template, context, newNode);
+    return node;
+  }
+  // Proceed if nodes already match
+  if (node.data === data) {
+    addNodeBinding(template, context, node);
+    return node.nextSibling;
+  }
+  throw attachError();
+}
+
+function addNodeBinding(template, context, node) {
+  if (!context) return;
+  context.addBinding(new NodeBinding(template, context, node));
+}
 
 function Attribute(data) {
   this.data = data;
