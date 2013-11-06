@@ -99,6 +99,9 @@ Template.prototype.getFragment = function(context, binding) {
 Template.prototype.appendTo = function(parent, context) {
   appendContent(parent, this.content, context);
 };
+Template.prototype.attachTo = function(parent, node, context) {
+  return attachContent(parent, node, this.content, context);
+};
 Template.prototype.stringify = function(value) {
   return (value == null) ? '' : value + '';
 };
@@ -114,6 +117,31 @@ Text.prototype.get = function(context, unescaped) {
 Text.prototype.appendTo = function(parent) {
   var node = document.createTextNode(this.data);
   parent.appendChild(node);
+};
+Text.prototype.attachTo = function(parent, node) {
+  if (!node) {
+    this.appendTo(parent);
+    return;
+  }
+  if (node.nodeType === 3) {
+    // Proceed if nodes already match
+    if (node.data === this.data) {
+      return node.nextSibling;
+    }
+    // Split adjacent text nodes that would have been merged together in HTML
+    var nextNode = splitData(node, this.data.length);
+    if (node.data !== this.data) {
+      throw attachError();
+    }
+    return nextNode;
+  }
+  // An empty text node might not be created at the end of some text
+  if (this.data === '') {
+    var newNode = document.createTextNode('');
+    parent.insertBefore(newNode, node);
+    return node;
+  }
+  throw attachError();
 };
 
 function DynamicText(expression) {
@@ -156,6 +184,20 @@ Comment.prototype.get = function() {
 Comment.prototype.appendTo = function(parent) {
   var node = document.createComment(this.data);
   parent.appendChild(node);
+};
+Comment.prototype.attachTo = function(parent, node) {
+  // Sometimes IE fails to create Comment nodes from HTML or innerHTML.
+  // This is an issue inside of <select> elements, for example.
+  if (!node || node.nodeType !== 8) {
+    var newNode = document.createComment(this.data);
+    parent.insertBefore(newNode, node);
+    return node;
+  }
+  // Proceed if nodes already match
+  if (node.data === this.data) {
+    return node.nextSibling;
+  }
+  throw attachError();
 };
 
 function DynamicComment(expression) {
@@ -222,16 +264,16 @@ function AttributesMap(object) {
   if (object) mergeInto(object, this);
 }
 
-function Element(tag, attributes, content, hooks) {
-  this.tag = tag;
+function Element(tagName, attributes, content, hooks) {
+  this.tagName = tagName;
   this.attributes = attributes;
   this.content = content;
   this.hooks = hooks;
-  this.isVoid = VOID_ELEMENTS[tag.toLowerCase()];
+  this.isVoid = VOID_ELEMENTS[tagName.toLowerCase()];
 }
 Element.prototype = new Template();
 Element.prototype.get = function(context) {
-  var tagItems = [this.tag];
+  var tagItems = [this.tagName];
   for (var key in this.attributes) {
     var value = this.attributes[key].get(context);
     if (value === true) {
@@ -241,7 +283,7 @@ Element.prototype.get = function(context) {
     }
   }
   var startTag = '<' + tagItems.join(' ') + '>';
-  var endTag = '</' + this.tag + '>';
+  var endTag = '</' + this.tagName + '>';
   if (this.content) {
     var inner = contentHtml(this.content, context);
     return startTag + inner + endTag;
@@ -249,12 +291,8 @@ Element.prototype.get = function(context) {
   return (this.isVoid) ? startTag : startTag + endTag;
 };
 Element.prototype.appendTo = function(parent, context) {
-  var element = document.createElement(this.tag);
-  if (this.hooks) {
-    for (var i = 0, len = this.hooks.length; i < len; i++) {
-      this.hooks[i].emit(context, element);
-    }
-  }
+  var element = document.createElement(this.tagName);
+  emitHooks(this.hooks, context, element);
   for (var key in this.attributes) {
     var value = this.attributes[key].getBound(context, element, key);
     var propertyName = CREATE_PROPERTIES[key];
@@ -269,6 +307,49 @@ Element.prototype.appendTo = function(parent, context) {
   if (this.content) appendContent(element, this.content, context);
   parent.appendChild(element);
 };
+Element.prototype.attachTo = function(parent, node, context) {
+  if (
+    !node ||
+    node.nodeType !== 1 ||
+    (node.tagName).toLowerCase() !== (this.tagName).toLowerCase()
+  ) {
+    throw attachError();
+  }
+  emitHooks(this.hooks, context, node);
+  for (var key in this.attributes) {
+    var attributeValue = getAttributeValue(node, key);
+    var value = this.attributes[key].getBound(context, node, key);
+    if (mismatchedAttribute(attributeValue, value)) {
+      throw attachError();
+    }
+  }
+  if (this.content) attachContent(node, node.firstChild, this.content, context);
+  return node.nextSibling;
+};
+
+function getAttributeValue(element, name) {
+  var propertyName = UPDATE_PROPERTIES[name];
+  return (propertyName) ? element[propertyName] : element.getAttribute(name);
+}
+
+function mismatchedAttribute(attributeValue, value) {
+  return (typeof value === 'boolean') ?
+    // For boolean attributes, presence or lack of an attribute is what
+    // determines truthiness. Even the empty string is truthy as a boolean
+    // attribute value
+    (attributeValue != null) === value :
+    // In this particular case, we want to use JavaScript's weak equality
+    // check `!=` instead of `!==`, because attributes are cast to strings and
+    // null should be equated to undefined
+    attributeValue != value;
+}
+
+function emitHooks(hooks, context, value) {
+  if (!hooks) return;
+  for (var i = 0, len = hooks.length; i < len; i++) {
+    hooks[i].emit(context, value);
+  }
+}
 
 function Block(expression, content) {
   this.expression = expression;
@@ -461,6 +542,12 @@ function appendContent(parent, content, context) {
     content[i].appendTo(parent, context);
   }
 }
+function attachContent(parent, node, content, context) {
+  for (var i = 0, len = content.length; i < len; i++) {
+    node = content[i].attachTo(parent, node, context);
+  }
+  return node;
+}
 function contentHtml(content, context, unescaped) {
   var html = '';
   for (var i = 0, len = content.length; i < len; i++) {
@@ -605,6 +692,12 @@ function replaceBindings(fragment, mirror) {
     mirrorNode = nextMirrorNode;
     node = node.nextSibling;
   } while (node);
+}
+
+function attachError() {
+  return new Error('Attaching bindings failed, because HTML structure ' +
+    'does not match client rendering'
+  );
 }
 
 function mismatchedNodes(node, mirrorNode) {

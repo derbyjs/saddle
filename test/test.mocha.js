@@ -264,74 +264,144 @@ function testDynamicRendering(test) {
 
 }
 
-describe('replaceBindings', function() {
+describe('attachTo', function() {
+  var fixture = document.getElementById('fixture');
 
   after(function() {
-    var fixture = document.getElementById('fixture');
     fixture.innerHTML = '';
   });
 
-  function renderAndReplace(template) {
-    var fixture = document.getElementById('fixture');
-    fixture.innerHTML = template.get();
-    var fragment = template.getFragment();
-    saddle.replaceBindings(fragment, fixture);
+  function renderAndAttach(template, context) {
+    fixture.innerHTML = template.get(context);
+    template.attachTo(fixture, fixture.firstChild, context);
   }
 
-  it('traverses a simple, valid DOM tree', function() {
+  it('splits static text nodes', function() {
     var template = new saddle.Template([
-      new saddle.Comment('Hi')
-    , new saddle.Element('ul', null, [
+      new saddle.Text('Hi')
+    , new saddle.Text(' there.')
+    ]);
+    renderAndAttach(template);
+    expect(fixture.childNodes.length).equal(2);
+  });
+
+  it('splits empty static text nodes', function() {
+    var template = new saddle.Template([
+      new saddle.Text('')
+    , new saddle.Text('')
+    ]);
+    renderAndAttach(template);
+    expect(fixture.childNodes.length).equal(2);
+  });
+
+  it('splits mixed empty static text nodes', function() {
+    var template = new saddle.Template([
+      new saddle.Text('')
+    , new saddle.Text('Hi')
+    , new saddle.Text('')
+    , new saddle.Text('')
+    , new saddle.Text(' there.')
+    , new saddle.Text('')
+    ]);
+    renderAndAttach(template);
+    expect(fixture.childNodes.length).equal(6);
+  });
+
+  it('adds empty text nodes around a comment', function() {
+    var template = new saddle.Template([
+      new saddle.Text('Hi')
+    , new saddle.Text('')
+    , new saddle.Comment('cool')
+    , new saddle.Comment('thing')
+    , new saddle.Text('')
+    ]);
+    renderAndAttach(template);
+    expect(fixture.childNodes.length).equal(5);
+  });
+
+  it('attaches to elements without attributes', function() {
+    var template = new saddle.Template([
+      new saddle.Element('ul', null, [
         new saddle.Element('li', null, [
-          new saddle.Text('Hi')
+          new saddle.Text('One')
+        ])
+      , new saddle.Element('li', null, [
+          new saddle.Text('Two')
         ])
       ])
     ]);
-    renderAndReplace(template);
+    renderAndAttach(template);
   });
-
-  it('traverses with comments in a table and select', function() {
-    // IE fails to create comments in certain locations when parsing HTML
-    var template = new saddle.Template([
-      new saddle.Element('table', null, [
-        new saddle.Comment('table comment')
-      , new saddle.Element('tbody', null, [
-          new saddle.Comment('tbody comment')
-        , new saddle.Element('tr', null, [
-            new saddle.Element('td')
-          ])
-        ])
-      ])
-    , new saddle.Element('select', null, [
-        new saddle.Comment('select comment start')
-      , new saddle.Element('option')
-      , new saddle.Comment('select comment inner')
-      , new saddle.Element('option')
-      , new saddle.Comment('select comment end')
-      , new saddle.Comment('select comment end 2')
-      ])
-    ]);
-    renderAndReplace(template);
-  });
-
-  it('throws when fragment does not match HTML', function() {
-    // This template is invalid HTML, and when it is parsed it will produce
-    // a different tree structure than when the nodes are created one-by-one
-    var template = new saddle.Template([
-      new saddle.Element('table', null, [
-        new saddle.Element('div', null, [
-          new saddle.Element('td', null, [
-            new saddle.Text('Hi')
-          ])
-        ])
-      ])
-    ]);
-    expect(function() {
-      renderAndReplace(template)
-    }).to.throwException();
-  });
-
 });
+
+// describe('replaceBindings', function() {
+
+//   after(function() {
+//     var fixture = document.getElementById('fixture');
+//     fixture.innerHTML = '';
+//   });
+
+//   function renderAndReplace(template) {
+//     var fixture = document.getElementById('fixture');
+//     fixture.innerHTML = template.get();
+//     var fragment = template.getFragment();
+//     saddle.replaceBindings(fragment, fixture);
+//   }
+
+//   it('traverses a simple, valid DOM tree', function() {
+//     var template = new saddle.Template([
+//       new saddle.Comment('Hi')
+//     , new saddle.Element('ul', null, [
+//         new saddle.Element('li', null, [
+//           new saddle.Text('Hi')
+//         ])
+//       ])
+//     ]);
+//     renderAndReplace(template);
+//   });
+
+//   it('traverses with comments in a table and select', function() {
+//     // IE fails to create comments in certain locations when parsing HTML
+//     var template = new saddle.Template([
+//       new saddle.Element('table', null, [
+//         new saddle.Comment('table comment')
+//       , new saddle.Element('tbody', null, [
+//           new saddle.Comment('tbody comment')
+//         , new saddle.Element('tr', null, [
+//             new saddle.Element('td')
+//           ])
+//         ])
+//       ])
+//     , new saddle.Element('select', null, [
+//         new saddle.Comment('select comment start')
+//       , new saddle.Element('option')
+//       , new saddle.Comment('select comment inner')
+//       , new saddle.Element('option')
+//       , new saddle.Comment('select comment end')
+//       , new saddle.Comment('select comment end 2')
+//       ])
+//     ]);
+//     renderAndReplace(template);
+//   });
+
+//   it('throws when fragment does not match HTML', function() {
+//     // This template is invalid HTML, and when it is parsed it will produce
+//     // a different tree structure than when the nodes are created one-by-one
+//     var template = new saddle.Template([
+//       new saddle.Element('table', null, [
+//         new saddle.Element('div', null, [
+//           new saddle.Element('td', null, [
+//             new saddle.Text('Hi')
+//           ])
+//         ])
+//       ])
+//     ]);
+//     expect(function() {
+//       renderAndReplace(template)
+//     }).to.throwException();
+//   });
+
+// });
 
 describe('Binding updates', function() {
 
