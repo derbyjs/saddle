@@ -337,7 +337,7 @@ function mismatchedAttribute(attributeValue, value) {
     // For boolean attributes, presence or lack of an attribute is what
     // determines truthiness. Even the empty string is truthy as a boolean
     // attribute value
-    (attributeValue != null) === value :
+    (attributeValue == null) === value :
     // In this particular case, we want to use JavaScript's weak equality
     // check `!=` instead of `!==`, because attributes are cast to strings and
     // null should be equated to undefined

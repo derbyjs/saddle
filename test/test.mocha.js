@@ -319,7 +319,7 @@ describe('attachTo', function() {
     expect(fixture.childNodes.length).equal(5);
   });
 
-  it('attaches to elements without attributes', function() {
+  it('attaches to nested elements', function() {
     var template = new saddle.Template([
       new saddle.Element('ul', null, [
         new saddle.Element('li', null, [
@@ -332,6 +332,19 @@ describe('attachTo', function() {
     ]);
     renderAndAttach(template);
   });
+
+  it('attaches to element attributes', function() {
+    var template = new saddle.Template([
+      new saddle.Element('input', new saddle.AttributesMap({
+        type: new saddle.Attribute('text')
+      , autofocus: new saddle.Attribute(true)
+      , placeholder: new saddle.Attribute(null)
+      }))
+    ]);
+    renderAndAttach(template);
+  });
+
+
 });
 
 // describe('replaceBindings', function() {
