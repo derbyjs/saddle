@@ -103,10 +103,7 @@ window.onload = function() {
   now = +new Date; console.log(new Date - start); start = now;
   el.innerHTML = html;
   now = +new Date; console.log(new Date - start); start = now;
-
-  var fragment = template.getFragment(context);
-  now = +new Date; console.log(new Date - start); start = now;
-  replaceBindings(fragment, el);
+  template.attachTo(el, el.firstChild, context);
   now = +new Date; console.log(new Date - start); start = now;
   binding = bindings[count];
 }
