@@ -543,18 +543,17 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
   return node;
 };
 EachBlock.prototype.attachItemTo = function(parent, node, context) {
-  var before = parent.lastChild;
   var start, end;
-  node = attachContent(parent, node, this.content, context);
-  if (before === parent.lastChild) {
+  var nextNode = attachContent(parent, node, this.content, context);
+  if (nextNode === node) {
     start = end = document.createComment('empty');
     parent.insertBefore(start, node);
   } else {
-    start = (before && before.nextSibling) || parent.firstChild;
-    end = parent.lastChild;
+    start = node;
+    end = (nextNode && nextNode.previousSibling) || parent.lastChild;
   }
   updateRange(context, null, this, start, end, true);
-  return node;
+  return nextNode;
 };
 EachBlock.prototype.update = function(context, binding) {
   var start = binding.start;
