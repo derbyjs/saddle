@@ -268,10 +268,11 @@ describe('attachTo', function() {
   var fixture = document.getElementById('fixture');
 
   after(function() {
-    fixture.innerHTML = '';
+    removeChildren(fixture);
   });
 
   function renderAndAttach(template, context) {
+    removeChildren(fixture);
     fixture.innerHTML = template.get(context);
     template.attachTo(fixture, fixture.firstChild, context);
   }
@@ -391,7 +392,7 @@ describe('Binding updates', function() {
 
   var fixture = document.getElementById('fixture');
   after(function() {
-    fixture.innerHTML = '';
+    removeChildren(fixture);
   });
 
   describe('getFragment', function() {
@@ -399,7 +400,7 @@ describe('Binding updates', function() {
       var bindings = [];
       var context = getContext(data, bindings);
       var fragment = template.getFragment(context);
-      fixture.innerHTML = '';
+      removeChildren(fixture);
       fixture.appendChild(fragment);
       return bindings;
     });
@@ -409,6 +410,7 @@ describe('Binding updates', function() {
     testBindingUpdates(function render(template, data) {
       var bindings = [];
       var context = getContext(data, bindings);
+      removeChildren(fixture);
       fixture.innerHTML = template.get(context);
       template.attachTo(fixture, fixture.firstChild, context);
       return bindings;
@@ -736,6 +738,12 @@ function getContext(data, bindings) {
   , removeBinding: function() {}
   };
   return new expressions.Context(contextMeta, data);
+}
+
+function removeChildren(node) {
+  while (node && node.firstChild) {
+    node.removeChild(node.firstChild);
+  }
 }
 
 // IE <=8 return comments for Node.children
