@@ -63,6 +63,7 @@ module.exports = {
 
   // Template Classes
 , Template: Template
+, Doctype: Doctype
 , Text: Text
 , DynamicText: DynamicText
 , Comment: Comment
@@ -102,6 +103,31 @@ Template.prototype.attachTo = function(parent, node, context) {
 };
 Template.prototype.stringify = function(value) {
   return (value == null) ? '' : value + '';
+};
+
+function Doctype(name, publicId, systemId) {
+  this.name = name;
+  this.publicId = publicId;
+  this.systemId = systemId;
+}
+Doctype.prototype = new Template();
+Doctype.prototype.get = function() {
+  var publicText = (this.publicId) ?
+    ' PUBLIC "' + this.publicId  + '"' :
+    '';
+  var systemText = (this.systemId) ?
+    (this.publicId) ?
+      ' "' + this.systemId + '"' :
+      ' SYSTEM "' + this.systemId + '"' :
+    '';
+  return '<!DOCTYPE ' + this.name + publicText + systemText + '>';
+};
+Doctype.prototype.appendTo = function(parent) {
+  var node = document.implementation.createDocumentType(this.name, this.publicId, this.systemId);
+  parent.appendChild(node);
+};
+Doctype.prototype.attachTo = function(parent, node) {
+  return node && node.nextSibling;
 };
 
 function Text(data) {
@@ -297,12 +323,15 @@ function AttributesMap(object) {
   if (object) mergeInto(object, this);
 }
 
-function Element(tagName, attributes, content, hooks) {
+function Element(tagName, attributes, content, selfClosing, hooks) {
   this.tagName = tagName;
   this.attributes = attributes;
   this.content = content;
+  this.selfClosing = selfClosing;
   this.hooks = hooks;
   this.isVoid = VOID_ELEMENTS[tagName.toLowerCase()];
+  this.startClose = (selfClosing) ? ' />' : '>';
+  this.endTag = '</' + tagName + '>';
 }
 Element.prototype = new Template();
 Element.prototype.get = function(context) {
@@ -315,13 +344,12 @@ Element.prototype.get = function(context) {
       tagItems.push(key + '="' + escapeAttribute(value) + '"');
     }
   }
-  var startTag = '<' + tagItems.join(' ') + '>';
-  var endTag = '</' + this.tagName + '>';
+  var startTag = '<' + tagItems.join(' ') + this.startClose;
   if (this.content) {
     var inner = contentHtml(this.content, context);
-    return startTag + inner + endTag;
+    return startTag + inner + this.endTag;
   }
-  return (this.isVoid) ? startTag : startTag + endTag;
+  return (this.isVoid) ? startTag : startTag + this.endTag;
 };
 Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tagName);
