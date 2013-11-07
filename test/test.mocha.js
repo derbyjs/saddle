@@ -394,14 +394,31 @@ describe('Binding updates', function() {
     fixture.innerHTML = '';
   });
 
-  function render(template, data) {
-    fixture.innerHTML = '';
-    var bindings = [];
-    var context = getContext(data, bindings);
-    var fragment = template.getFragment(context);
-    fixture.appendChild(fragment);
-    return bindings;
-  }
+  describe('getFragment', function() {
+    testBindingUpdates(function render(template, data) {
+      var bindings = [];
+      var context = getContext(data, bindings);
+      var fragment = template.getFragment(context);
+      fixture.innerHTML = '';
+      fixture.appendChild(fragment);
+      return bindings;
+    });
+  });
+
+  describe('get + attachTo', function() {
+    testBindingUpdates(function render(template, data) {
+      var bindings = [];
+      var context = getContext(data, bindings);
+      fixture.innerHTML = template.get(context);
+      template.attachTo(fixture, fixture.firstChild, context);
+      return bindings;
+    });
+  });
+
+});
+
+function testBindingUpdates(render) {
+  var fixture = document.getElementById('fixture');
 
   it('updates a single TextNode', function() {
     var template = new saddle.Template([
@@ -709,8 +726,7 @@ describe('Binding updates', function() {
   // of binding.insert() / binding.remove()?
   it('inserts into an empty list with an else');
   it('removes all items from a list with an else');
-
-});
+}
 
 function getContext(data, bindings) {
   var contextMeta = {
