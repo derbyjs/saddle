@@ -182,7 +182,7 @@ function attachText(parent, node, data, template, context) {
   // An empty text node might not be created at the end of some text
   if (data === '') {
     var newNode = document.createTextNode('');
-    parent.insertBefore(newNode, node);
+    parent.insertBefore(newNode, node || null);
     addNodeBinding(template, context, newNode);
     return node;
   }
@@ -235,7 +235,7 @@ function attachComment(parent, node, data, template, context) {
   // This is an issue inside of <select> elements, for example.
   if (!node || node.nodeType !== 8) {
     var newNode = document.createComment(data);
-    parent.insertBefore(newNode, node);
+    parent.insertBefore(newNode, node || null);
     addNodeBinding(template, context, newNode);
     return node;
   }
@@ -407,9 +407,9 @@ Block.prototype.attachTo = function(parent, node, context) {
   var blockContext = context.child(this.expression);
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
-  parent.insertBefore(start, node);
+  parent.insertBefore(start, node || null);
   node = attachContent(parent, node, this.content, blockContext);
-  parent.insertBefore(end, node);
+  parent.insertBefore(end, node || null);
   updateRange(context, null, this, start, end);
   return node;
 };
@@ -458,7 +458,7 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
 ConditionalBlock.prototype.attachTo = function(parent, node, context) {
   var start = document.createComment(this.beginning);
   var end = document.createComment(this.ending);
-  parent.insertBefore(start, node);
+  parent.insertBefore(start, node || null);
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
@@ -467,7 +467,7 @@ ConditionalBlock.prototype.attachTo = function(parent, node, context) {
       break;
     }
   }
-  parent.insertBefore(end, node);
+  parent.insertBefore(end, node || null);
   updateRange(context, null, this, start, end);
   return node;
 };
@@ -529,7 +529,7 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
   var listContext = context.child(this.expression);
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
-  parent.insertBefore(start, node);
+  parent.insertBefore(start, node || null);
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.eachChild(i);
@@ -538,7 +538,7 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
   } else if (this.elseContent) {
     node = attachContent(parent, node, this.elseContent, listContext);
   }
-  parent.insertBefore(end, node);
+  parent.insertBefore(end, node || null);
   updateRange(context, null, this, start, end);
   return node;
 };
@@ -547,7 +547,7 @@ EachBlock.prototype.attachItemTo = function(parent, node, context) {
   var nextNode = attachContent(parent, node, this.content, context);
   if (nextNode === node) {
     start = end = document.createComment('empty');
-    parent.insertBefore(start, node);
+    parent.insertBefore(start, node || null);
   } else {
     start = node;
     end = (nextNode && nextNode.previousSibling) || parent.lastChild;
@@ -575,7 +575,7 @@ EachBlock.prototype.insert = function(context, binding, index, howMany) {
     var itemContext = listContext.eachChild(i);
     this.appendItemTo(fragment, itemContext);
   }
-  binding.start.parentNode.insertBefore(fragment, node);
+  binding.start.parentNode.insertBefore(fragment, node || null);
 };
 EachBlock.prototype.remove = function(context, binding, index, howMany) {
   var node = indexStartNode(binding.start, index, binding.end);
@@ -604,7 +604,7 @@ EachBlock.prototype.move = function(context, binding, from, to, howMany) {
     node = nextNode;
   }
   node = indexStartNode(binding.start, to, binding.end);
-  binding.start.parentNode.insertBefore(fragment, node);
+  binding.start.parentNode.insertBefore(fragment, node || null);
 };
 
 function indexStartNode(node, index, endBound) {
@@ -665,7 +665,7 @@ function replaceRange(context, start, end, fragment, binding) {
     node = nextNode;
   }
   // This also works if nextNode is null, by doing an append
-  parent.insertBefore(fragment, nextNode);
+  parent.insertBefore(fragment, nextNode || null);
 }
 function emitRemoved(context, node, ignore) {
   var binding = node.$bindNode;
@@ -754,6 +754,12 @@ function escapeAttribute(string) {
 
 //// IE shims & workarounds ////
 
+// General notes:
+// 
+// In all cases, Node.insertBefore should have `|| null` after its second
+// argument. IE works correctly when the argument is ommitted or equal
+// to null, but it throws and error if it is equal to undefined.
+
 if (!Array.isArray) {
   Array.isArray = function(value) {
     return Object.prototype.toString.call(value) === '[object Array]';
@@ -765,7 +771,7 @@ function splitData(node, index) {
   var newNode = node.cloneNode(false);
   newNode.deleteData(0, index);
   node.deleteData(index, node.length - index);
-  node.parentNode.insertBefore(newNode, node.nextSibling);
+  node.parentNode.insertBefore(newNode, node.nextSibling || null);
   return newNode;
 }
 
@@ -813,14 +819,14 @@ function setNodeProperty(node, key, value) {
           if (!proxyNode || proxyNode.$bindProxy !== node) {
             proxyNode = document.createComment('proxy');
             proxyNode.$bindProxy = node;
-            node.parentNode.insertBefore(proxyNode, node.nextSibling);
+            node.parentNode.insertBefore(proxyNode, node.nextSibling || null);
           }
         } else {
           proxyNode = node.previousSibling;
           if (!proxyNode || proxyNode.$bindProxy !== node) {
             proxyNode = document.createComment('proxy');
             proxyNode.$bindProxy = node;
-            node.parentNode.insertBefore(proxyNode, node);
+            node.parentNode.insertBefore(proxyNode, node || null);
           }
         }
         return proxyNode[key] = value;
