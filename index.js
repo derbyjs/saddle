@@ -200,7 +200,7 @@ function attachText(parent, node, data, template, context) {
     // Split adjacent text nodes that would have been merged together in HTML
     var nextNode = splitData(node, data.length);
     if (node.data !== data) {
-      throw attachError();
+      throw attachError(node);
     }
     addNodeBinding(template, context, node);
     return nextNode;
@@ -212,7 +212,7 @@ function attachText(parent, node, data, template, context) {
     addNodeBinding(template, context, newNode);
     return node;
   }
-  throw attachError();
+  throw attachError(node);
 }
 
 function Comment(data) {
@@ -270,7 +270,7 @@ function attachComment(parent, node, data, template, context) {
     addNodeBinding(template, context, node);
     return node.nextSibling;
   }
-  throw attachError();
+  throw attachError(node);
 }
 
 function addNodeBinding(template, context, node) {
@@ -323,15 +323,17 @@ function AttributesMap(object) {
   if (object) mergeInto(object, this);
 }
 
-function Element(tagName, attributes, content, selfClosing, hooks) {
+function Element(tagName, attributes, content, hooks, selfClosing, notClosed) {
   this.tagName = tagName;
   this.attributes = attributes;
   this.content = content;
-  this.selfClosing = selfClosing;
   this.hooks = hooks;
-  this.isVoid = VOID_ELEMENTS[tagName.toLowerCase()];
+  this.selfClosing = selfClosing;
+  this.notClosed = notClosed;
+
   this.startClose = (selfClosing) ? ' />' : '>';
-  this.endTag = '</' + tagName + '>';
+  var isVoid = VOID_ELEMENTS[tagName.toLowerCase()];
+  this.endTag = (notClosed || isVoid) ? '' : '</' + tagName + '>';
 }
 Element.prototype = new Template();
 Element.prototype.get = function(context) {
@@ -349,7 +351,7 @@ Element.prototype.get = function(context) {
     var inner = contentHtml(this.content, context);
     return startTag + inner + this.endTag;
   }
-  return (this.isVoid) ? startTag : startTag + this.endTag;
+  return startTag + this.endTag;
 };
 Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tagName);
@@ -374,14 +376,14 @@ Element.prototype.attachTo = function(parent, node, context) {
     node.nodeType !== 1 ||
     (node.tagName).toLowerCase() !== (this.tagName).toLowerCase()
   ) {
-    throw attachError();
+    throw attachError(node);
   }
   emitHooks(this.hooks, context, node);
   for (var key in this.attributes) {
     var attributeValue = getAttributeValue(node, key);
     var value = this.attributes[key].getBound(context, node, key);
     if (mismatchedAttribute(attributeValue, value)) {
-      throw attachError();
+      throw attachError(node);
     }
   }
   if (this.content) attachContent(node, node.firstChild, this.content, context);
@@ -709,6 +711,13 @@ function emitRemoved(context, node, ignore) {
   for (node = node.firstChild; node; node = node.nextSibling) {
     emitRemoved(context, node, ignore);
   }
+}
+
+function attachError(node) {
+  console.error('Attach failed at: ', node);
+  return new Error('Attaching bindings failed, because HTML structure ' +
+    'does not match client rendering.'
+  );
 }
 
 function Binding() {}
