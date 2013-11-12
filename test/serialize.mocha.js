@@ -35,7 +35,8 @@ describe('The Block Constructor', function() {
 
 describe('The Text Constructor', function() {
   it(
-    'produces constructor when its serialize method is called', 
+    'produces constructor with a string attribute when its' +
+    'serialize method is called', 
     function() {
 
       var input = new exp.Text('test');
@@ -47,7 +48,8 @@ describe('The Text Constructor', function() {
 
 describe('The Comment Constructor', function() {
   it(
-    'produces constructor when its serialize method is called', 
+    'produces constructor with a string attribute when its' +
+    'serialize method is called', 
     function() {
 
       var input = new exp.Comment('test');
@@ -57,14 +59,17 @@ describe('The Comment Constructor', function() {
   );
 });
 
-describe('The Comment Constructor', function() {
+describe('The AttributesMap Constructor', function() {
   it(
-    'produces constructor when its serialize method is called', 
+    'produces constructor with an object attirbute when its' +
+    'serialize method is called', 
     function() {
 
-      var input = new exp.Comment('test');
-      var output = 'new Comment(\'test\')';
+      var input = new exp.AttributesMap({ class: 'red' });
+      var output = 'new AttributesMap({"class":"red"})';
+      console.log(input.serialize());
       assert(input.serialize() == output);
     }
   );
 });
+

@@ -355,6 +355,15 @@ function getUnescapedValue(expression, context) {
 function AttributesMap(object) {
   if (object) mergeInto(object, this);
 }
+AttributesMap.prototype.serialize = function() {
+  
+  var o = {
+    ctor: 'AttributesMap',
+    values: [this]
+  }
+
+  return serialize(o);
+};
 
 function Element(tagName, attributes, content, hooks) {
   
