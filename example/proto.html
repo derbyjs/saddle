@@ -8,7 +8,7 @@
 var module = {};
 </script>
 <script src="../index.js"></script>
-<script src="expressions.js"></script>
+<script src="./expressions.js"></script>
 <script>
 
 var _this = new Expression();
@@ -16,49 +16,93 @@ _this.toString = function() {
   return 'this';
 };
 
-var template = new Block(_this, [
-  new Element('div', new AttributesMap({
-    'class': new Attribute('post')
-  }), [
-    new Element('h1', null, [
-      new Text('By ')
-    , new DynamicText(new Expression('author'))
+var template = new Block(
+  _this, 
+  [
+    new Element(
+      'div', 
+      new AttributesMap({
+        'class': new Attribute('post')
+      }), 
+      [
+        new Element(
+          'h1', 
+          null, 
+          [
+            new Text('By '), 
+            new DynamicText(new Expression('author'))
+          ]
+        ), 
+        new Element(
+          'div', 
+          new AttributesMap({
+            'class': new Attribute('body')
+          }),
+          [
+            new DynamicText(new Expression('body'))
+          ]
+        ), 
+      new Text(''), 
+      new Comment('Go, go comment node!'), 
+      new ConditionalBlock(
+        [new Expression('comments'), _this], 
+        [
+          [
+            new Element(
+              'h1', 
+              null, 
+              [
+                new Text('Comments')
+              ]
+            ), 
+            new Text('')
+          ], 
+          [
+            new Element(
+              'h1', 
+              null, 
+              [
+                new Text('No comments')
+              ]
+            )
+          ]
+        ]
+      ), 
+      new EachBlock(
+        new Expression('comments'), 
+        [
+          new Element(
+            'h2', 
+            null, 
+            [
+              new Text('By '), 
+              new Block(
+                new Expression('nonsense'), 
+                [
+                  new DynamicText(new Expression('author'))
+                ]
+              )
+            ]
+          ), 
+          new Element(
+            'div', 
+            new AttributesMap({
+              'class': new Attribute('body')
+            }), 
+            [
+              new DynamicText(new Expression('body'))
+            ]
+          )
+        ], 
+        [
+          new Text('Lamers')
+        ]
+      )
     ])
-  , new Element('div', new AttributesMap({
-      'class': new Attribute('body')
-    }), [
-      new DynamicText(new Expression('body'))
-    ])
-  , new Text('')
-  , new Comment('Go, go comment node!')
-  , new ConditionalBlock([new Expression('comments'), _this], [[
-        new Element('h1', null, [
-          new Text('Comments')
-        ])
-      , new Text('')
-      ], [
-        new Element('h1', null, [
-          new Text('No comments')
-        ])
-      ]
-    ])
-  , new EachBlock(new Expression('comments'), [
-      new Element('h2', null, [
-        new Text('By ')
-      , new Block(new Expression('nonsense'), [
-          new DynamicText(new Expression('author'))
-        ])
-      ])
-    , new Element('div', new AttributesMap({
-        'class': new Attribute('body')
-      }), [
-        new DynamicText(new Expression('body'))
-      ])
-    ], [
-      new Text('Lamers')
-    ])
-  ])
-]);
+  ]
+);
+
+console.log(template.serialize())
 
 // i = 8 makes about 9K DOM nodes
 for (var i = 8; i--;) {
