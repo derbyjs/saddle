@@ -30,11 +30,23 @@ Expression.prototype.get = function(context) {
 Expression.prototype.truthy = function(context) {
   return templateTruthy(this.get(context));
 };
+Expression.prototype.serialize = function() {
+  return this.serializer({
+    ctor: 'Expression',
+    values: [this.source]
+  });
+};
 
 function ElseExpression() {}
 ElseExpression.prototype = new Expression();
 ElseExpression.prototype.truthy = function() {
   return true;
+};
+ElseExpression.prototype.serialize = function() {
+  return this.serializer({
+    ctor: 'ElseExpression',
+    values: []
+  });
 };
 
 function templateTruthy(value) {
@@ -79,3 +91,10 @@ Context.prototype._get = function(property) {
     this.data[property] :
     this.parent && this.parent._get(property);
 };
+Context.prototype.serialize = function() {
+  return this.serializer({
+    ctor: 'Context',
+    values: [this.meta, this.data, this.parent]
+  });
+};
+

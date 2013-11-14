@@ -1,42 +1,4 @@
 
-var serialize = function(opts) {
-  
-  function resolve(value) {
-    if (value && value.serialize) {
-      return value.serialize();
-    }
-    else {
-      return value;
-    }
-  }
-
-  var values = '';
-
-  if (Array.isArray(opts.values) && opts.values.length) {
-    values = opts.values.map(function(value) {
-      if (Array.isArray(value)) {
-        return '[' + value.map(function(parameter) {
-          return resolve(parameter);
-        }).join(', ') + ']';
-      }
-      else if (typeof value === 'string') {
-        return String('\'' + resolve(value) + '\'');
-      }
-      else {
-        return JSON.stringify(value);
-      }
-    }).join(', ');
-  }
-
-  var output = [
-    'new ', 
-    opts.ctor, 
-    '(', values, ')'
-  ];
-
-  return output.join('');
-}
-
 // UPDATE_PROPERTIES map HTML attribute names to an Element DOM property that
 // should be used for setting on bindings updates instead of setAttribute.
 //
@@ -142,7 +104,46 @@ Template.prototype.attachTo = function(parent, node, context) {
 Template.prototype.stringify = function(value) {
   return (value == null) ? '' : value + '';
 };
+Template.prototype.type = 'Template';
 Template.prototype.serialize = function() {
+  return this.serializer([this.content]);
+};
+Template.prototype.serializer = function(input) {
+  
+  function resolve(value) {
+    if (value && value.serialize) {
+      return value.serialize();
+    }
+    else {
+      return value;
+    }
+  }
+
+  var strtmp = '';
+
+  if (Array.isArray(input) && input.length) {
+    strtmp = input.map(function(value) {
+      if (Array.isArray(value)) {
+        return '[' + value.map(function(parameter) {
+          return resolve(parameter);
+        }).join(', ') + ']';
+      }
+      else if (typeof value === 'string') {
+        return String('\'' + resolve(value) + '\'');
+      }
+      else {
+        return JSON.stringify(value);
+      }
+    }).join(', ');
+  }
+
+  var output = [
+    'new ', 
+    this.type,
+    '(', strtmp, ')'
+  ];
+
+  return output.join('');
 };
 
 function Text(data) {
@@ -160,14 +161,9 @@ Text.prototype.appendTo = function(parent) {
 Text.prototype.attachTo = function(parent, node) {
   return attachText(parent, node, this.data, this);
 };
+Text.prototype.type = 'Text';
 Text.prototype.serialize = function() {
-
-  var o = {
-    ctor: 'Text',
-    values: [this.data]
-  }
-
-  return serialize(o);
+  return this.serializer([this.data]);
 };
 
 function DynamicText(expression) {
@@ -253,14 +249,9 @@ Comment.prototype.appendTo = function(parent) {
 Comment.prototype.attachTo = function(parent, node) {
   return attachComment(parent, node, this.data);
 };
+Comment.prototype.type = 'Comment';
 Comment.prototype.serialize = function() {
-
-  var o = {
-    ctor: 'Comment',
-    values: [this.data]
-  };
-
-  return serialize(o);
+  return this.serializer([this.data]);
 }
 
 function DynamicComment(expression) {
@@ -317,6 +308,11 @@ function Attribute(data) {
 Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
+Attribute.prototype.type = 'Attribute';
+Attribute.prototype.serialize = function() {
+  var o = { type: 'Attribute' };
+  return Template.prototype.serializer.call(o, [this.data]);
+};
 
 function DynamicAttribute(template) {
   // In attributes, template may be an instance of Template or Expression
@@ -342,6 +338,10 @@ DynamicAttribute.prototype.update = function(context, binding) {
     binding.element.setAttribute(binding.name, value);
   }
 };
+DynamicAttribute.prototype.type = 'DynamicAttribute';
+DynamicAttribute.prototype.serialize = function() {
+  return this.serializer([this.template]);
+};
 
 function getUnescapedValue(expression, context) {
   var unescaped = true;
@@ -355,14 +355,10 @@ function getUnescapedValue(expression, context) {
 function AttributesMap(object) {
   if (object) mergeInto(object, this);
 }
+AttributesMap.prototype.type = 'AttributesMap';
 AttributesMap.prototype.serialize = function() {
-  
-  var o = {
-    ctor: 'AttributesMap',
-    values: [this]
-  }
-
-  return serialize(o);
+  var o = { type: 'AttributesMap' };
+  return Template.prototype.serializer.call(o, [this]);
 };
 
 function Element(tagName, attributes, content, hooks) {
@@ -428,23 +424,21 @@ Element.prototype.attachTo = function(parent, node, context) {
   if (this.content) attachContent(node, node.firstChild, this.content, context);
   return node.nextSibling;
 };
+Element.prototype.type = 'Element';
 Element.prototype.serialize = function() {
 
-  var o = {
-    ctor: 'Element',
-    values: []
-  };
+  var values = [];
 
   if (this.tagName)
-    o.values.push(this.tagName);
+    values.push(this.tagName);
   if (this.attributes) 
-    o.values.push(this.attributes);
+    values.push(this.attributes);
   if (this.content) 
-    o.values.push(this.content);
+    values.push(this.content);
   if (this.hooks) 
-    o.values.push(this.hooks);
+    values.push(this.hooks);
 
-  return serialize(o);
+  return this.serializer(values);
 };
 
 function getAttributeValue(element, name) {
@@ -507,20 +501,18 @@ Block.prototype.update = function(context, binding) {
   var fragment = this.getFragment(context, binding);
   replaceRange(context, start, end, fragment, binding);
 };
+Block.prototype.type = 'Block';
 Block.prototype.serialize = function() {
 
-  var o = {
-    ctor: 'Block',
-    values: []
-  };
+  var values = [];
 
   if (this.expression || this.expression == null)
-    o.values.push(this.expression);
+    values.push(this.expression);
 
   if (this.content != undefined)
-    o.values.push(this.content);
+    values.push(this.content);
 
-  return serialize(o);
+  return this.serializer(values);
 };
 
 function ConditionalBlock(expressions, contents) {
