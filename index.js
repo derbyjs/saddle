@@ -127,7 +127,10 @@ Doctype.prototype.appendTo = function(parent) {
   parent.appendChild(node);
 };
 Doctype.prototype.attachTo = function(parent, node) {
-  return node && node.nextSibling;
+  if (!node || node.nodeType !== 10) {
+    throw attachError(node);
+  }
+  return node.nextSibling;
 };
 
 function Text(data) {
@@ -380,11 +383,10 @@ Element.prototype.attachTo = function(parent, node, context) {
   }
   emitHooks(this.hooks, context, node);
   for (var key in this.attributes) {
-    var attributeValue = getAttributeValue(node, key);
-    var value = this.attributes[key].getBound(context, node, key);
-    if (mismatchedAttribute(attributeValue, value)) {
-      throw attachError(node);
-    }
+    // Get each attribute to create bindings
+    this.attributes[key].getBound(context, node, key);
+    // TODO: Ideally, this would also check that the node's current attributes
+    // are equivalent, but there are some tricky edge cases
   }
   if (this.content) attachContent(node, node.firstChild, this.content, context);
   return node.nextSibling;
@@ -393,18 +395,6 @@ Element.prototype.attachTo = function(parent, node, context) {
 function getAttributeValue(element, name) {
   var propertyName = UPDATE_PROPERTIES[name];
   return (propertyName) ? element[propertyName] : element.getAttribute(name);
-}
-
-function mismatchedAttribute(attributeValue, value) {
-  return (typeof value === 'boolean') ?
-    // For boolean attributes, presence or lack of an attribute is what
-    // determines truthiness. Even the empty string is truthy as a boolean
-    // attribute value
-    (attributeValue == null) === value :
-    // In this particular case, we want to use JavaScript's weak equality
-    // check `!=` instead of `!==`, because attributes are cast to strings and
-    // null should be equated to undefined
-    attributeValue != value;
 }
 
 function emitHooks(hooks, context, value) {
