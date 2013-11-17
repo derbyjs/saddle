@@ -303,6 +303,7 @@ DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.template, context);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
+    if (value === void 0) value = null;
     binding.element[propertyName] = value;
   } else if (value === false || value == null) {
     binding.element.removeAttribute(binding.name);
@@ -363,6 +364,7 @@ Element.prototype.appendTo = function(parent, context) {
     var value = this.attributes[key].getBound(context, element, key);
     var propertyName = CREATE_PROPERTIES[key];
     if (propertyName) {
+      if (value === void 0) value = null;
       element[propertyName] = value;
     } else if (value === true) {
       element.setAttribute(key, key);
