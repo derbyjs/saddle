@@ -1,6 +1,6 @@
 
 // UPDATE_PROPERTIES map HTML attribute names to an Element DOM property that
-// should be used for setting on bindings updates instead of setAttribute.
+// should be used for setting on bindings updates instead of s'test'Attribute.
 //
 // https://github.com/jquery/jquery/blob/1.x-master/src/attributes/prop.js
 // https://github.com/jquery/jquery/blob/master/src/attributes/prop.js
@@ -130,6 +130,33 @@ Template.prototype.serializer = function(input) {
       }
       else if (typeof value === 'string') {
         return String('\'' + resolve(value) + '\'');
+      }
+      else if (typeof value === 'object') {
+        var so = [];
+
+        function parseSerializable(value) {
+          var ao = [];
+          for (var k in value) {
+            if (typeof value[k] === 'object' && value[k].serialize) {
+              ao.push('\'' + k + '\': ' + value[k].serialize());
+            }
+            else if(k !== 'type') {
+              if (typeof value[k] === 'string') {
+                ao.push('\'' + k + '\': \'' + value[k] + '\'');
+              }
+              else if (typeof value[k] === 'number') {
+                ao.push('\'' + k + '\': ' + value[k]);
+              }
+            }
+          }
+          so.push('{ ' + ao.join(', ') + ' }');
+        }
+
+        parseSerializable(value);
+        
+        if (so.length >= 1) {
+          return so.join(' ');
+        }
       }
       else {
         return JSON.stringify(value);
@@ -362,7 +389,7 @@ AttributesMap.prototype.serialize = function() {
 };
 
 function Element(tagName, attributes, content, hooks) {
-  
+ 
   this.tagName = tagName;
   this.attributes = attributes;
   this.content = content;

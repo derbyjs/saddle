@@ -8,9 +8,9 @@ describe('The Block Constructor', function() {
     'produces constructor when its serialize method is called', 
     function() {
 
-      var input = new exp.Block();
+      var input = new exp.Block().serialize();
       var output = 'new Block()';
-      assert(input.serialize() == output);
+      assert(input == output);
     }
   );
 
@@ -26,8 +26,7 @@ describe('The Block Constructor', function() {
         ]
       ).serialize();
 
-      var output = 'new Block(null, [new Element(\'div\')])';
-
+      var output = 'new Block({  }, [new Element(\'div\')])';
       assert(input == output);
     }
   );
@@ -40,8 +39,21 @@ describe('The Text Constructor', function() {
     'serialize method is called', 
     function() {
 
-      var input = new exp.Text('test');
+      var input = new exp.Text('test').serialize();
       var output = 'new Text(\'test\')';
+      assert(input == output);
+    }
+  );
+});
+
+describe('The Element Constructor', function() {
+  it(
+    'produces constructor with a string attribute when its' +
+    'serialize method is called', 
+    function() {
+
+      var input = new exp.Element('test');
+      var output = 'new Element(\'test\')';
       assert(input.serialize() == output);
     }
   );
@@ -53,9 +65,9 @@ describe('The Comment Constructor', function() {
     'serialize method is called', 
     function() {
 
-      var input = new exp.Comment('test');
+      var input = new exp.Comment('test').serialize();
       var output = 'new Comment(\'test\')';
-      assert(input.serialize() == output);
+      assert(input == output);
     }
   );
 });
@@ -66,22 +78,9 @@ describe('The AttributesMap Constructor', function() {
     'serialize method is called', 
     function() {
 
-      var input = new exp.AttributesMap({ class: 'red' });
-      var output = 'new AttributesMap({"class":"red"})';
-      assert(input.serialize() == output);
-    }
-  );
-});
-
-describe('The AttributesMap Constructor', function() {
-  it(
-    'produces constructor with an object attirbute when its' +
-    'serialize method is called', 
-    function() {
-
-      var input = new exp.AttributesMap({ class: 'red' });
-      var output = 'new AttributesMap({"class":"red"})';
-      assert(input.serialize() == output);
+      var input = new exp.AttributesMap({ class: 'red' }).serialize();
+      var output = "new AttributesMap({ 'class': 'red' })";
+      assert(input == output);
     }
   );
 });
@@ -92,25 +91,30 @@ describe('The Attribute Constructor', function() {
     'serialize method is called', 
     function() {
     
-      var input = new exp.Attribute('test');
+      var input = new exp.Attribute('test').serialize();
       var output = 'new Attribute(\'test\')';
-      assert(input.serialize() == output);
+      assert(input == output);
     }
   );
+
+  it(
+    'should produce the same result when nested',
+    function() {
+      var input = new exp.Element('div', 
+        new exp.AttributesMap({
+          'class': new exp.Attribute('post')
+        })
+      ).serialize();
+      var output = 'new Element(\'div\', new AttributesMap({"class": new Attribute(\'post\')})';
+      assert(input, output);
+
+    }
+  );
+    
+      
 });
 
-describe('The  Constructor', function() {
-  it(
-    'produces constructor with an object attirbute when its' +
-    'serialize method is called', 
-    function() {
-    
-      var input = new exp.Attribute('test');
-      var output = 'new Attribute(\'test\')';
-      assert(input.serialize() == output);
-    }
-  );
-});
+
 
 var expressions = require('../example/expressions');
 exp.Expression = expressions.Expression;
