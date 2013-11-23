@@ -1,8 +1,3 @@
-module.exports = {
-  Expression: Expression
-, ElseExpression: ElseExpression
-, Context: Context
-};
 
 //// Example framework-specific classes ////
 
@@ -18,6 +13,14 @@ module.exports = {
 //   Expression::toString()
 //   Expression::get(context)
 //   Expression::truthy(context)
+var Template = require('../index').Template;
+
+module.exports = {
+  Expression: Expression, 
+  ElseExpression: ElseExpression, 
+  Context: Context
+};
+
 function Expression(source) {
   this.source = source;
 }
@@ -25,16 +28,18 @@ Expression.prototype.toString = function() {
   return this.source;
 };
 Expression.prototype.get = function(context) {
-  return (this.source == null) ? context.data : context._get(this.source);
+  return ((this.source == null) 
+    ? context.data 
+    : context._get(this.source)
+  );
 };
 Expression.prototype.truthy = function(context) {
   return templateTruthy(this.get(context));
 };
+Expression.prototype = new Template();
+Expression.prototype.type = 'Expression';
 Expression.prototype.serialize = function() {
-  return this.serializer({
-    ctor: 'Expression',
-    values: [this.source]
-  });
+  return this.serializer(this.source);
 };
 
 function ElseExpression() {}
@@ -42,11 +47,9 @@ ElseExpression.prototype = new Expression();
 ElseExpression.prototype.truthy = function() {
   return true;
 };
+ElseExpression.prototype.type = 'ElseExpression';
 ElseExpression.prototype.serialize = function() {
-  return this.serializer({
-    ctor: 'ElseExpression',
-    values: []
-  });
+  return Template.prototype.serializer.call(this, true);
 };
 
 function templateTruthy(value) {
@@ -72,6 +75,7 @@ function Context(meta, data, parent) {
   this.data = data;
   this.parent = parent;
 }
+Context.prototype = new Expression();
 Context.prototype.addBinding = function(binding) {
   this.meta.addBinding(binding);
 };
@@ -91,10 +95,13 @@ Context.prototype._get = function(property) {
     this.data[property] :
     this.parent && this.parent._get(property);
 };
+Context.prototype.type = 'Context';
 Context.prototype.serialize = function() {
-  return this.serializer({
-    ctor: 'Context',
-    values: [this.meta, this.data, this.parent]
-  });
+  var values = [
+    this.meta, 
+    this.data, 
+    this.parent
+  ];
+  return Template.prototype.serializer.call(this, values);
 };
 

@@ -1,11 +1,13 @@
 var exp = require('../index');
 
 var assert = require('better-assert');
+var expressions = require('../example/expressions');
+exp.Expression = expressions.Expression;
 
 describe('The Block Constructor', function() {
 
   it(
-    'produces constructor when its serialize method is called', 
+    'produces constructor when its serialize method is called ', 
     function() {
 
       var input = new exp.Block().serialize();
@@ -15,7 +17,7 @@ describe('The Block Constructor', function() {
   );
 
   it(
-    'produces a constructor and the arguments that were passed' +
+    'produces a constructor and the arguments that were passed ' +
     'to it when its serialize method is called', 
     function() {
 
@@ -26,7 +28,7 @@ describe('The Block Constructor', function() {
         ]
       ).serialize();
 
-      var output = 'new Block({  }, [new Element(\'div\')])';
+      var output = 'new Block(null, [new Element(\'div\')])';
       assert(input == output);
     }
   );
@@ -35,7 +37,7 @@ describe('The Block Constructor', function() {
 
 describe('The Text Constructor', function() {
   it(
-    'produces constructor with a string attribute when its' +
+    'produces constructor with a string attribute when its ' +
     'serialize method is called', 
     function() {
 
@@ -48,20 +50,33 @@ describe('The Text Constructor', function() {
 
 describe('The Element Constructor', function() {
   it(
-    'produces constructor with a string attribute when its' +
+    'produces constructor with a string attribute when its ' +
     'serialize method is called', 
     function() {
 
-      var input = new exp.Element('test');
+      var input = new exp.Element('test').serialize();
       var output = 'new Element(\'test\')';
-      assert(input.serialize() == output);
+      assert(input == output);
+    }
+  );
+});
+
+describe('The Expression Constructor', function() {
+  it(
+    'produces constructor with a string attribute when its ' +
+    'serialize method is called', 
+    function() {
+
+      var input = new exp.Expression('test').serialize();
+      var output = 'new Expression(\'test\')';
+      assert(input == output);
     }
   );
 });
 
 describe('The Comment Constructor', function() {
   it(
-    'produces constructor with a string attribute when its' +
+    'produces constructor with a string attribute when its ' +
     'serialize method is called', 
     function() {
 
@@ -79,11 +94,90 @@ describe('The AttributesMap Constructor', function() {
     function() {
 
       var input = new exp.AttributesMap({ class: 'red' }).serialize();
-      var output = "new AttributesMap({ 'class': 'red' })";
+      var output = "new AttributesMap({class: 'red'})";
       assert(input == output);
     }
   );
 });
+
+describe('The ConditionalBlock Constructor', function() {
+  it(
+    'produces constructor with an object attirbute when its' +
+    'serialize method is called, it should resolve nested constructors',
+    function() {
+
+      var input = new exp.ConditionalBlock(
+        [new exp.Expression('comments'), null],
+        [
+          [new exp.Element('h1', null, [new exp.Text('Comments')]), new exp.Text('')], 
+          [new exp.Element('h1', null, [new exp.Text('No comments')])]
+        ]
+      ).serialize();
+
+      var output = [
+        "new ConditionalBlock([[new Expression('comments'), null],",
+        " [[new Element('h1', null, [new Text('Comments')]), new Text('')], ",
+        "[new Element('h1', null, [new Text('No comments')])]]])"
+      ].join('');
+
+      assert(input == output);
+    }
+  );
+});
+
+
+describe('The EachBlock Constructor', function() {
+  it(
+    'produces constructor with an object attirbute when its' +
+    'serialize method is called, it should resolve nested constructors',
+    function() {
+
+      var input = new exp.EachBlock(
+        new exp.Expression('comments'), [
+          new exp.Element('h2', null, [
+            new exp.Text('By '), 
+            new exp.Block(
+              new exp.Expression('nonsense'),
+              [new exp.DynamicText(new exp.Expression('author'))]
+            )
+          ]), 
+          new exp.Element('div', 
+            new exp.AttributesMap({
+              'class': new exp.Attribute('body')
+            }), 
+            [new exp.DynamicText(new exp.Expression('body'))]
+          )
+        ],
+        [new exp.Text('Lamers')]
+      ).serialize();
+
+      var output = [
+        "new Block(new Expression('comments'), ",
+        "[new Element('h2', null, [new Text('By '), ",
+        "new Block(new Expression('nonsense'), ",
+        "[new DynamicText(new Expression('author'))])]), ",
+        "new Element('div', {class: new Attribute('body')}, ",
+        "[new DynamicText(new Expression('body'))])])"
+      ].join('');
+
+      assert(input == output);
+    }
+  );
+});
+
+
+
+
+          
+
+
+
+
+
+
+
+
+
 
 describe('The Attribute Constructor', function() {
   it(
@@ -98,120 +192,36 @@ describe('The Attribute Constructor', function() {
   );
 
   it(
-    'should produce the same result when nested',
+    'should produce the same result when nested in an AttributesMap',
     function() {
-      var input = new exp.Element('div', 
+      var input = new exp.Element(
+        'div', 
         new exp.AttributesMap({
           'class': new exp.Attribute('post')
         })
       ).serialize();
-      var output = 'new Element(\'div\', new AttributesMap({"class": new Attribute(\'post\')})';
+      var output = 'new Element(\'div\', new AttributesMap({class: new Attribute(\'post\')})';
       assert(input, output);
-
     }
   );
-    
-      
-});
 
-
-
-var expressions = require('../example/expressions');
-exp.Expression = expressions.Expression;
-
-with(exp) {
-
-  var _this = new Expression();
-  _this.toString = function() {
-    return 'this';
-  };
-
-  var template = new Block(
-    _this, 
-    [
-      new Element(
-        'div', 
-        new AttributesMap({
-          'class': new Attribute('post')
-        }), 
+  it(
+    'should produce the same result when nested in an AttributesMap that is nested',
+    function() {
+      var input = new exp.Block(
+        {},
         [
-          new Element(
-            'h1', 
-            null, 
-            [
-              new Text('By '), 
-              new DynamicText(new Expression('author'))
-            ]
-          ), 
-          new Element(
+          new exp.Element(
             'div', 
-            new AttributesMap({
-              'class': new Attribute('body')
-            }),
-            [
-              new DynamicText(new Expression('body'))
-            ]
-          ), 
-          new Text(''), 
-          new Comment('Go, go comment node!'), 
-          new ConditionalBlock(
-            [new Expression('comments'), _this], 
-            [
-              [
-                new Element(
-                  'h1', 
-                  null, 
-                  [
-                    new Text('Comments')
-                  ]
-                ), 
-                new Text('')
-              ], 
-              [
-                new Element(
-                  'h1', 
-                  null, 
-                  [
-                    new Text('No comments')
-                  ]
-                )
-              ]
-            ]
-          ), 
-          new EachBlock(
-            new Expression('comments'), 
-            [
-              new Element(
-                'h2', 
-                null, 
-                [
-                  new Text('By '), 
-                  new Block(
-                    new Expression('nonsense'), 
-                    [
-                      new DynamicText(new Expression('author'))
-                    ]
-                  )
-                ]
-              ), 
-              new Element(
-                'div', 
-                new AttributesMap({
-                  'class': new Attribute('body')
-                }), 
-                [
-                  new DynamicText(new Expression('body'))
-                ]
-              )
-            ], 
-            [
-              new Text('Lamers')
-            ]
+            new exp.AttributesMap({
+              'class': new exp.Attribute('post')
+            })
           )
-        ])
-    ]
+        ]
+      ).serialize();
+
+      var output = 'new Block({}, new Element(\'div\', new AttributesMap({"class": new Attribute(\'post\')}))';
+      assert(input, output);
+    }
   );
-
-  console.log(template.serialize())
-
-}   
+});
