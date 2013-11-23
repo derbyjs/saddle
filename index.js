@@ -64,6 +64,7 @@ module.exports = {
 
   // Template Classes
 , Template: Template
+, Doctype: Doctype
 , Text: Text
 , DynamicText: DynamicText
 , Comment: Comment
@@ -169,6 +170,34 @@ Template.prototype.serializer = function() {
   ].join('');
 };
 
+function Doctype(name, publicId, systemId) {
+  this.name = name;
+  this.publicId = publicId;
+  this.systemId = systemId;
+}
+Doctype.prototype = new Template();
+Doctype.prototype.get = function() {
+  var publicText = (this.publicId) ?
+    ' PUBLIC "' + this.publicId  + '"' :
+    '';
+  var systemText = (this.systemId) ?
+    (this.publicId) ?
+      ' "' + this.systemId + '"' :
+      ' SYSTEM "' + this.systemId + '"' :
+    '';
+  return '<!DOCTYPE ' + this.name + publicText + systemText + '>';
+};
+Doctype.prototype.appendTo = function(parent) {
+  var node = document.implementation.createDocumentType(this.name, this.publicId, this.systemId);
+  parent.appendChild(node);
+};
+Doctype.prototype.attachTo = function(parent, node) {
+  if (!node || node.nodeType !== 10) {
+    throw attachError(node);
+  }
+  return node.nextSibling;
+};
+
 function Text(data) {
   this.data = data;
   this.escaped = escapeHtml(data);
@@ -248,7 +277,7 @@ function attachText(parent, node, data, template, context) {
     // Split adjacent text nodes that would have been merged together in HTML
     var nextNode = splitData(node, data.length);
     if (node.data !== data) {
-      throw attachError();
+      throw attachError(node);
     }
     addNodeBinding(template, context, node);
     return nextNode;
@@ -260,7 +289,7 @@ function attachText(parent, node, data, template, context) {
     addNodeBinding(template, context, newNode);
     return node;
   }
-  throw attachError();
+  throw attachError(node);
 }
 
 function Comment(data) {
@@ -322,7 +351,7 @@ function attachComment(parent, node, data, template, context) {
     addNodeBinding(template, context, node);
     return node.nextSibling;
   }
-  throw attachError();
+  throw attachError(node);
 }
 
 function addNodeBinding(template, context, node) {
@@ -357,6 +386,7 @@ DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.template, context);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
+    if (value === void 0) value = null;
     binding.element[propertyName] = value;
   } else if (value === false || value == null) {
     binding.element.removeAttribute(binding.name);
@@ -388,13 +418,17 @@ AttributesMap.prototype.serialize = function() {
   return Template.prototype.serializer.call(this, this);
 };
 
-function Element(tagName, attributes, content, hooks) {
- 
+function Element(tagName, attributes, content, hooks, selfClosing, notClosed) {
   this.tagName = tagName;
   this.attributes = attributes;
   this.content = content;
   this.hooks = hooks;
-  this.isVoid = VOID_ELEMENTS[tagName.toLowerCase()];
+  this.selfClosing = selfClosing;
+  this.notClosed = notClosed;
+
+  this.startClose = (selfClosing) ? ' />' : '>';
+  var isVoid = VOID_ELEMENTS[tagName.toLowerCase()];
+  this.endTag = (notClosed || isVoid) ? '' : '</' + tagName + '>';
 }
 Element.prototype = new Template();
 Element.prototype.get = function(context) {
@@ -407,13 +441,12 @@ Element.prototype.get = function(context) {
       tagItems.push(key + '="' + escapeAttribute(value) + '"');
     }
   }
-  var startTag = '<' + tagItems.join(' ') + '>';
-  var endTag = '</' + this.tagName + '>';
+  var startTag = '<' + tagItems.join(' ') + this.startClose;
   if (this.content) {
     var inner = contentHtml(this.content, context);
-    return startTag + inner + endTag;
+    return startTag + inner + this.endTag;
   }
-  return (this.isVoid) ? startTag : startTag + endTag;
+  return startTag + this.endTag;
 };
 Element.prototype.appendTo = function(parent, context) {
   var element = document.createElement(this.tagName);
@@ -422,6 +455,7 @@ Element.prototype.appendTo = function(parent, context) {
     var value = this.attributes[key].getBound(context, element, key);
     var propertyName = CREATE_PROPERTIES[key];
     if (propertyName) {
+      if (value === void 0) value = null;
       element[propertyName] = value;
     } else if (value === true) {
       element.setAttribute(key, key);
@@ -438,15 +472,14 @@ Element.prototype.attachTo = function(parent, node, context) {
     node.nodeType !== 1 ||
     (node.tagName).toLowerCase() !== (this.tagName).toLowerCase()
   ) {
-    throw attachError();
+    throw attachError(node);
   }
   emitHooks(this.hooks, context, node);
   for (var key in this.attributes) {
-    var attributeValue = getAttributeValue(node, key);
-    var value = this.attributes[key].getBound(context, node, key);
-    if (mismatchedAttribute(attributeValue, value)) {
-      throw attachError();
-    }
+    // Get each attribute to create bindings
+    this.attributes[key].getBound(context, node, key);
+    // TODO: Ideally, this would also check that the node's current attributes
+    // are equivalent, but there are some tricky edge cases
   }
   if (this.content) attachContent(node, node.firstChild, this.content, context);
   return node.nextSibling;
@@ -459,18 +492,6 @@ Element.prototype.serialize = function() {
 function getAttributeValue(element, name) {
   var propertyName = UPDATE_PROPERTIES[name];
   return (propertyName) ? element[propertyName] : element.getAttribute(name);
-}
-
-function mismatchedAttribute(attributeValue, value) {
-  return (typeof value === 'boolean') ?
-    // For boolean attributes, presence or lack of an attribute is what
-    // determines truthiness. Even the empty string is truthy as a boolean
-    // attribute value
-    (attributeValue == null) === value :
-    // In this particular case, we want to use JavaScript's weak equality
-    // check `!=` instead of `!==`, because attributes are cast to strings and
-    // null should be equated to undefined
-    attributeValue != value;
 }
 
 function emitHooks(hooks, context, value) {
@@ -790,6 +811,13 @@ function emitRemoved(context, node, ignore) {
   for (node = node.firstChild; node; node = node.nextSibling) {
     emitRemoved(context, node, ignore);
   }
+}
+
+function attachError(node) {
+  console.error('Attach failed at: ', node);
+  return new Error('Attaching bindings failed, because HTML structure ' +
+    'does not match client rendering.'
+  );
 }
 
 function Binding() {}
