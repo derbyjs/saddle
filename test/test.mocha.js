@@ -1,3 +1,5 @@
+var expressions = require('../example/expressions');
+
 describe('Static rendering', function() {
 
   describe('HTML', function() {
