@@ -13,7 +13,10 @@
 //   Expression::toString()
 //   Expression::get(context)
 //   Expression::truthy(context)
-var Template = require('../index').Template;
+
+if (typeof require === 'function') {
+  var Template = require('../index').Template;
+}
 
 module.exports = {
   Expression: Expression, 
@@ -36,11 +39,11 @@ Expression.prototype.get = function(context) {
 Expression.prototype.truthy = function(context) {
   return templateTruthy(this.get(context));
 };
-Expression.prototype = new Template();
 Expression.prototype.type = 'Expression';
 Expression.prototype.serialize = function() {
   return this.serializer(this.source);
 };
+Expression.prototype.serializer = Template.prototype.serializer;
 
 function ElseExpression() {}
 ElseExpression.prototype = new Expression();
@@ -48,9 +51,6 @@ ElseExpression.prototype.truthy = function() {
   return true;
 };
 ElseExpression.prototype.type = 'ElseExpression';
-ElseExpression.prototype.serialize = function() {
-  return Template.prototype.serializer.call(this, true);
-};
 
 function templateTruthy(value) {
   if (Array.isArray(value)) {
