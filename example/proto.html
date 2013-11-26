@@ -20,10 +20,9 @@ var template = new Block(
   _this, 
   [
     new Element(
-      'div', 
-      new AttributesMap({
+      'div', {
         'class': new Attribute('post')
-      }), 
+      },
       [
         new Element(
           'h1', 
@@ -34,10 +33,9 @@ var template = new Block(
           ]
         ), 
         new Element(
-          'div', 
-          new AttributesMap({
+          'div', {
             'class': new Attribute('body')
-          }),
+          },
           [
             new DynamicText(new Expression('body'))
           ]
@@ -85,10 +83,9 @@ var template = new Block(
               ]
             ), 
             new Element(
-              'div', 
-              new AttributesMap({
+              'div', {
                 'class': new Attribute('body')
-              }), 
+              }, 
               [
                 new DynamicText(new Expression('body'))
               ]

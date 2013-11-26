@@ -1,5 +1,3 @@
-var expressions = require('../example/expressions');
-
 describe('Static rendering', function() {
 
   describe('HTML', function() {
@@ -65,11 +63,11 @@ function testStaticRendering(test) {
 
   it('renders a div with literal attributes', function() {
     test({
-      template: new saddle.Element('div', new saddle.AttributesMap({
+      template: new saddle.Element('div', {
         id: new saddle.Attribute('page')
       , 'data-x': new saddle.Attribute('24')
       , 'class': new saddle.Attribute('content fit')
-      }))
+      })
     , html: '<div id="page" data-x="24" class="content fit"></div>'
     , fragment: function(fragment) {
         expect(fragment.childNodes.length).equal(1);
@@ -83,9 +81,9 @@ function testStaticRendering(test) {
 
   it('renders a true boolean attribute', function() {
     test({
-      template: new saddle.Element('input', new saddle.AttributesMap({
+      template: new saddle.Element('input', {
         autofocus: new saddle.Attribute(true)
-      }))
+      })
     , html: '<input autofocus>'
     , fragment: function(fragment) {
         expect(fragment.childNodes.length).equal(1);
@@ -97,9 +95,9 @@ function testStaticRendering(test) {
 
   it('renders a false boolean attribute', function() {
     test({
-      template: new saddle.Element('input', new saddle.AttributesMap({
+      template: new saddle.Element('input', {
         autofocus: new saddle.Attribute(false)
-      }))
+      })
     , html: '<input>'
     , fragment: function(fragment) {
         expect(fragment.childNodes.length).equal(1);
@@ -202,9 +200,9 @@ function testStaticRendering(test) {
 
   it('renders <input> value attribute', function() {
     test({
-      template: new saddle.Element('input', new saddle.AttributesMap({
+      template: new saddle.Element('input', {
         value: new saddle.Attribute('hello')
-      }))
+      })
     , html: '<input value="hello">'
     , fragment: function(fragment) {
         expect(fragment.childNodes[0].value).equal('hello');
@@ -215,10 +213,10 @@ function testStaticRendering(test) {
 
   it('renders <input> checked attribute: true', function() {
     test({
-      template: new saddle.Element('input', new saddle.AttributesMap({
+      template: new saddle.Element('input', {
         type: new saddle.Attribute('radio')
       , checked: new saddle.Attribute(true)
-      }))
+      })
     , html: '<input type="radio" checked>'
     , fragment: function(fragment) {
         expect(fragment.childNodes[0].checked).equal(true);
@@ -228,10 +226,10 @@ function testStaticRendering(test) {
 
   it('renders <input> checked attribute: false', function() {
     test({
-      template: new saddle.Element('input', new saddle.AttributesMap({
+      template: new saddle.Element('input', {
         type: new saddle.Attribute('radio')
       , checked: new saddle.Attribute(false)
-      }))
+      })
     , html: '<input type="radio">'
     , fragment: function(fragment) {
         expect(fragment.childNodes[0].checked).equal(false);
@@ -245,7 +243,7 @@ function testDynamicRendering(test) {
 
   it('renders a template as an attribute expression', function() {
     test({
-      template: new saddle.Element('div', new saddle.AttributesMap({
+      template: new saddle.Element('div', {
         'class': new saddle.DynamicAttribute(new saddle.Template([
           new saddle.Text('dropdown')
         , new saddle.ConditionalBlock([
@@ -254,7 +252,7 @@ function testDynamicRendering(test) {
             [new saddle.Text(' show')]
           ])
         ]))
-      }))
+      })
     , html: '<div class="dropdown show"></div>'
     , fragment: function(fragment) {
         expect(fragment.childNodes.length).equal(1);
@@ -338,11 +336,11 @@ describe('attachTo', function() {
 
   it('attaches to element attributes', function() {
     var template = new saddle.Template([
-      new saddle.Element('input', new saddle.AttributesMap({
+      new saddle.Element('input', {
         type: new saddle.Attribute('text')
       , autofocus: new saddle.Attribute(true)
       , placeholder: new saddle.Attribute(null)
-      }))
+      })
     ]);
     renderAndAttach(template);
   });
@@ -465,10 +463,10 @@ function testBindingUpdates(render) {
 
   it('updates an Element attribute', function() {
     var template = new saddle.Template([
-      new saddle.Element('div', new saddle.AttributesMap({
+      new saddle.Element('div', {
         'class': new saddle.Attribute('message')
       , 'data-greeting': new saddle.DynamicAttribute(new expressions.Expression('greeting'))
-      }))
+      })
     ]);
     var binding = render(template).pop();
     var node = fixture.firstChild;
