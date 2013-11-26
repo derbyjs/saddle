@@ -793,7 +793,9 @@ function emitRemoved(context, node, ignore) {
 }
 
 function attachError(node) {
-  console.error('Attach failed at: ', node);
+  if (typeof console !== 'undefined') {
+    console.error('Attach failed at: ', node);
+  }
   return new Error('Attaching bindings failed, because HTML structure ' +
     'does not match client rendering.'
   );
