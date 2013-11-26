@@ -1,6 +1,6 @@
 var exp = require('../index');
+var expect = require('expect.js');
 
-var assert = require('better-assert');
 var expressions = require('../example/expressions');
 exp.Expression = expressions.Expression;
 
@@ -12,7 +12,7 @@ describe('The Block Constructor', function() {
 
       var input = new exp.Block().serialize();
       var output = 'new Block()';
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 
@@ -29,7 +29,7 @@ describe('The Block Constructor', function() {
       ).serialize();
 
       var output = 'new Block(null, [new Element(\'div\')])';
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 
@@ -43,7 +43,7 @@ describe('The Text Constructor', function() {
 
       var input = new exp.Text('test').serialize();
       var output = 'new Text(\'test\')';
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 });
@@ -56,7 +56,7 @@ describe('The Element Constructor', function() {
 
       var input = new exp.Element('test').serialize();
       var output = 'new Element(\'test\')';
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 });
@@ -69,7 +69,7 @@ describe('The Expression Constructor', function() {
 
       var input = new exp.Expression('test').serialize();
       var output = 'new Expression(\'test\')';
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 });
@@ -82,20 +82,7 @@ describe('The Comment Constructor', function() {
 
       var input = new exp.Comment('test').serialize();
       var output = 'new Comment(\'test\')';
-      assert(input == output);
-    }
-  );
-});
-
-describe('The AttributesMap Constructor', function() {
-  it(
-    'produces constructor with an object attirbute when its' +
-    'serialize method is called', 
-    function() {
-
-      var input = new exp.AttributesMap({ class: 'red' }).serialize();
-      var output = "new AttributesMap({class: 'red'})";
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 });
@@ -120,7 +107,7 @@ describe('The ConditionalBlock Constructor', function() {
         "[new Element('h1', null, [new Text('No comments')])]]])"
       ].join('');
 
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 });
@@ -141,10 +128,9 @@ describe('The EachBlock Constructor', function() {
               [new exp.DynamicText(new exp.Expression('author'))]
             )
           ]), 
-          new exp.Element('div', 
-            new exp.AttributesMap({
+          new exp.Element('div', {
               'class': new exp.Attribute('body')
-            }), 
+            },
             [new exp.DynamicText(new exp.Expression('body'))]
           )
         ],
@@ -160,24 +146,10 @@ describe('The EachBlock Constructor', function() {
         "[new DynamicText(new Expression('body'))])])"
       ].join('');
 
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 });
-
-
-
-
-          
-
-
-
-
-
-
-
-
-
 
 describe('The Attribute Constructor', function() {
   it(
@@ -187,41 +159,39 @@ describe('The Attribute Constructor', function() {
     
       var input = new exp.Attribute('test').serialize();
       var output = 'new Attribute(\'test\')';
-      assert(input == output);
+      expect(input).equal(output);
     }
   );
 
   it(
-    'should produce the same result when nested in an AttributesMap',
+    'should produce the same result when nested in Element attributes',
     function() {
       var input = new exp.Element(
-        'div', 
-        new exp.AttributesMap({
+        'div', {
           'class': new exp.Attribute('post')
-        })
+        }
       ).serialize();
-      var output = 'new Element(\'div\', new AttributesMap({class: new Attribute(\'post\')})';
-      assert(input, output);
+      var output = 'new Element(\'div\', {class: new Attribute(\'post\')})';
+      expect(input).equal(output);
     }
   );
 
   it(
-    'should produce the same result when nested in an AttributesMap that is nested',
+    'should produce the same result when nested in Element that is nested',
     function() {
       var input = new exp.Block(
         {},
         [
           new exp.Element(
-            'div', 
-            new exp.AttributesMap({
+            'div', {
               'class': new exp.Attribute('post')
-            })
+            }
           )
         ]
       ).serialize();
 
-      var output = 'new Block({}, new Element(\'div\', new AttributesMap({"class": new Attribute(\'post\')}))';
-      assert(input, output);
+      var output = 'new Block({}, [new Element(\'div\', {class: new Attribute(\'post\')})])';
+      expect(input).equal(output);
     }
   );
 });

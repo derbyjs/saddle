@@ -76,7 +76,6 @@ module.exports = {
 
 , Attribute: Attribute
 , DynamicAttribute: DynamicAttribute
-, AttributesMap: AttributesMap
 
   // Binding Classes
 , Binding: Binding
@@ -110,65 +109,54 @@ Template.prototype.serialize = function() {
   return this.serializer(this.content);
 };
 Template.prototype.serializer = function() {
-
-  function serialize(input) {
-    if ((input && input.serialize) &&
-        (input.type && input.type != 'AttributesMap')) {
-      return input.serialize();
-    }
-    else if (typeof input == 'undefined') {
-      return;
-    }
-    else if (Array.isArray(input)) {
-      var tmp = [];
-      for (var i = 0; i < input.length; i++) {
-        var value = serialize(input[i]);
-        if (value) {
-          tmp.push(value);
-        }
-      }
-      return '[' + tmp.join(', ') + ']';
-    }
-    else if (input === null) {
-      return 'null';
-    }
-    else if (typeof input === 'string') {
-      return '\'' + input + '\'';
-    }
-    else if (typeof input === 'number' || 
-      typeof input === 'boolean') {
-        return input;
-    }
-    else if (typeof input == 'object') {
-      var tmp = [];
-      for (var key in input) {
-        if (key === 'type' && 
-            input[key] === 'AttributesMap') {
-          continue;
-        }
-        var value = serialize(input[key])
-        if (value) {
-          tmp.push(key + ': ' + value);
-        }
-      }
-      return '{' + tmp.join(', ') + '}';
-    }
+  // Map each argument into its string representation
+  var args = [];
+  for (var i = 0, len = arguments.length; i < len; i++) {
+    var arg = serialize(arguments[i]);
+    args.push(arg);
   }
-
-  var args = Array.prototype.slice.call(arguments);
-
-  var strtmp = args.map(function(arg, index) {
-    return serialize(arg);
-  }).filter(function(arg) {
-    return arg;
-  }).join(', ');
-
-  return [
-    'new ',
-    this.type,
-    '(', strtmp, ')'
-  ].join('');
+  // Remove trailing null values, assuming they are optional
+  for (var i = args.length; i--;) {
+    var arg = args[i];
+    if (arg !== 'void 0' && arg !== 'null') break;
+    args.pop();
+  }
+  return 'new ' + this.type + '(' + args.join(', ') + ')';
 };
+
+function serialize(input) {
+  if (input && input.serialize) {
+    return input.serialize();
+  }
+  else if (typeof input == 'undefined') {
+    return 'void 0';
+  }
+  else if (input === null) {
+    return 'null';
+  }
+  else if (typeof input === 'string') {
+    return '\'' + input + '\'';
+  }
+  else if (typeof input === 'number' || typeof input === 'boolean') {
+    return input + '';
+  }
+  else if (Array.isArray(input)) {
+    var tmp = [];
+    for (var i = 0; i < input.length; i++) {
+      var value = serialize(input[i]);
+      if (value) tmp.push(value);
+    }
+    return '[' + tmp.join(', ') + ']';
+  }
+  else if (typeof input == 'object') {
+    var tmp = [];
+    for (var key in input) {
+      var value = serialize(input[key]);
+      if (value) tmp.push(key + ': ' + value);
+    }
+    return '{' + tmp.join(', ') + '}';
+  }
+}
 
 function Doctype(name, publicId, systemId) {
   this.name = name;
@@ -257,8 +245,7 @@ DynamicText.prototype.update = function(context, binding) {
 };
 DynamicText.prototype.type = 'DynamicText';
 DynamicText.prototype.serialize = function() {
-  var x = this.serializer(this.expression);
-  return  x;
+  return this.serializer(this.expression);
 };
 
 function attachText(parent, node, data, template, context) {
@@ -409,14 +396,6 @@ function getUnescapedValue(expression, context) {
   }
   return value;
 }
-
-function AttributesMap(object) {
-  if (object) mergeInto(object, this);
-}
-AttributesMap.prototype.type = 'AttributesMap';
-AttributesMap.prototype.serialize = function() {
-  return Template.prototype.serializer.call(this, this);
-};
 
 function Element(tagName, attributes, content, hooks, selfClosing, notClosed) {
   this.tagName = tagName;
