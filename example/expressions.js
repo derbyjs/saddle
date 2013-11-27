@@ -15,7 +15,7 @@
 //   Expression::truthy(context)
 
 if (typeof require === 'function') {
-  var Template = require('../index').Template;
+  var serializeObject = require('serialize-object');
 }
 
 module.exports = {
@@ -44,7 +44,7 @@ Expression.prototype.type = 'Expression';
 Expression.prototype.serialize = function() {
   return this._serialize(this.source);
 };
-Expression.prototype._serialize = Template.prototype._serialize;
+Expression.prototype._serialize = serializeObject && serializeObject.instance;
 
 function ElseExpression() {}
 ElseExpression.prototype = new Expression();
