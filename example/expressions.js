@@ -42,9 +42,8 @@ Expression.prototype.truthy = function(context) {
 Expression.prototype.module = 'expressions';
 Expression.prototype.type = 'Expression';
 Expression.prototype.serialize = function() {
-  return this._serialize(this.source);
+  return serializeObject.instance(this, this.source);
 };
-Expression.prototype._serialize = serializeObject && serializeObject.instance;
 
 function ElseExpression() {}
 ElseExpression.prototype = new Expression();

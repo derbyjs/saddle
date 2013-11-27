@@ -110,9 +110,8 @@ Template.prototype.stringify = function(value) {
 Template.prototype.module = 'templates';
 Template.prototype.type = 'Template';
 Template.prototype.serialize = function() {
-  return this._serialize(this.content);
+  return serializeObject.instance(this, this.content);
 };
-Template.prototype._serialize = serializeObject && serializeObject.instance;
 
 
 function Doctype(name, publicId, systemId) {
@@ -144,7 +143,7 @@ Doctype.prototype.attachTo = function(parent, node) {
 };
 Doctype.prototype.type = 'Doctype';
 Doctype.prototype.serialize = function() {
-  return this._serialize(this.name, this.publicId, this.systemId);
+  return serializeObject.instance(this, this.name, this.publicId, this.systemId);
 };
 
 function Text(data) {
@@ -164,7 +163,7 @@ Text.prototype.attachTo = function(parent, node) {
 };
 Text.prototype.type = 'Text';
 Text.prototype.serialize = function() {
-  return this._serialize(this.data);
+  return serializeObject.instance(this, this.data);
 };
 
 function DynamicText(expression) {
@@ -206,7 +205,7 @@ DynamicText.prototype.update = function(context, binding) {
 };
 DynamicText.prototype.type = 'DynamicText';
 DynamicText.prototype.serialize = function() {
-  return this._serialize(this.expression);
+  return serializeObject.instance(this, this.expression);
 };
 
 function attachText(parent, node, data, template, context) {
@@ -256,7 +255,7 @@ Comment.prototype.attachTo = function(parent, node) {
 };
 Comment.prototype.type = 'Comment';
 Comment.prototype.serialize = function() {
-  return this._serialize(this.data);
+  return serializeObject.instance(this, this.data);
 }
 
 function DynamicComment(expression) {
@@ -286,7 +285,7 @@ DynamicComment.prototype.update = function(context, binding) {
 };
 DynamicComment.prototype.type = 'DynamicComment';
 DynamicComment.prototype.serialize = function() {
-  return this._serialize(this.expression);
+  return serializeObject.instance(this, this.expression);
 }
 
 function attachComment(parent, node, data, template, context) {
@@ -317,12 +316,11 @@ function Attribute(data) {
 Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
+Attribute.prototype.module = Template.prototype.module;
 Attribute.prototype.type = 'Attribute';
 Attribute.prototype.serialize = function() {
-  return this._serialize(this.data);
+  return serializeObject.instance(this, this.data);
 };
-Attribute.prototype.module = Template.prototype.module;
-Attribute.prototype._serialize = Template.prototype._serialize;
 
 function DynamicAttribute(template) {
   // In attributes, template may be an instance of Template or Expression
@@ -352,7 +350,7 @@ DynamicAttribute.prototype.update = function(context, binding) {
 };
 DynamicAttribute.prototype.type = 'DynamicAttribute';
 DynamicAttribute.prototype.serialize = function() {
-  return this._serialize(this.template);
+  return serializeObject.instance(this, this.template);
 };
 
 function getUnescapedValue(expression, context) {
@@ -432,8 +430,9 @@ Element.prototype.attachTo = function(parent, node, context) {
 };
 Element.prototype.type = 'Element';
 Element.prototype.serialize = function() {
-  return this._serialize(
-    this.tagName
+  return serializeObject.instance(
+    this
+  , this.tagName
   , this.attributes
   , this.content
   , this.hooks
@@ -492,7 +491,7 @@ Block.prototype.update = function(context, binding) {
 };
 Block.prototype.type = 'Block';
 Block.prototype.serialize = function() {
-  return this._serialize(this.expression, this.content);
+  return serializeObject.instance(this, this.expression, this.content);
 };
 
 function ConditionalBlock(expressions, contents) {
@@ -547,7 +546,7 @@ ConditionalBlock.prototype.attachTo = function(parent, node, context) {
 };
 ConditionalBlock.prototype.type = 'ConditionalBlock';
 ConditionalBlock.prototype.serialize = function() {
-  return this._serialize(this.expressions, this.contents);
+  return serializeObject.instance(this, this.expressions, this.contents);
 };
 
 function EachBlock(expression, content, elseContent) {
@@ -686,7 +685,7 @@ EachBlock.prototype.move = function(context, binding, from, to, howMany) {
 };
 EachBlock.prototype.type = 'EachBlock';
 EachBlock.prototype.serialize = function() {
-  return this._serialize(this.expression, this.content, this.elseContent);
+  return serializeObject.instance(this, this.expression, this.content, this.elseContent);
 };
 
 function indexStartNode(node, index, endBound) {
