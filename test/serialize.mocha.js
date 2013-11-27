@@ -1,8 +1,6 @@
-var exp = require('../index');
 var expect = require('expect.js');
-
+var templates = require('../index');
 var expressions = require('../example/expressions');
-exp.Expression = expressions.Expression;
 
 describe('The Block Constructor', function() {
 
@@ -10,7 +8,7 @@ describe('The Block Constructor', function() {
     'produces constructor when its serialize method is called ', 
     function() {
 
-      var input = new exp.Block().serialize();
+      var input = new templates.Block().serialize();
       var output = 'new Block()';
       expect(input).equal(output);
     }
@@ -21,10 +19,10 @@ describe('The Block Constructor', function() {
     'to it when its serialize method is called', 
     function() {
 
-      var input = new exp.Block(
+      var input = new templates.Block(
         null,
         [
-          new exp.Element('div')
+          new templates.Element('div')
         ]
       ).serialize();
 
@@ -41,7 +39,7 @@ describe('The Text Constructor', function() {
     'serialize method is called', 
     function() {
 
-      var input = new exp.Text('test').serialize();
+      var input = new templates.Text('test').serialize();
       var output = 'new Text(\'test\')';
       expect(input).equal(output);
     }
@@ -54,7 +52,7 @@ describe('The Element Constructor', function() {
     'serialize method is called', 
     function() {
 
-      var input = new exp.Element('test').serialize();
+      var input = new templates.Element('test').serialize();
       var output = 'new Element(\'test\')';
       expect(input).equal(output);
     }
@@ -67,7 +65,7 @@ describe('The Expression Constructor', function() {
     'serialize method is called', 
     function() {
 
-      var input = new exp.Expression('test').serialize();
+      var input = new expressions.Expression('test').serialize();
       var output = 'new Expression(\'test\')';
       expect(input).equal(output);
     }
@@ -80,7 +78,7 @@ describe('The Comment Constructor', function() {
     'serialize method is called', 
     function() {
 
-      var input = new exp.Comment('test').serialize();
+      var input = new templates.Comment('test').serialize();
       var output = 'new Comment(\'test\')';
       expect(input).equal(output);
     }
@@ -93,18 +91,18 @@ describe('The ConditionalBlock Constructor', function() {
     'serialize method is called, it should resolve nested constructors',
     function() {
 
-      var input = new exp.ConditionalBlock(
-        [new exp.Expression('comments'), null],
-        [
-          [new exp.Element('h1', null, [new exp.Text('Comments')]), new exp.Text('')], 
-          [new exp.Element('h1', null, [new exp.Text('No comments')])]
+      var input = new templates.ConditionalBlock(
+        [new expressions.Expression('comments'), null]
+      , [
+          [new templates.Element('h1', null, [new templates.Text('Comments')]), new templates.Text('')]
+        , [new templates.Element('h1', null, [new templates.Text('No comments')])]
         ]
       ).serialize();
 
       var output = [
-        "new ConditionalBlock([[new Expression('comments'), null],",
+        "new ConditionalBlock([new Expression('comments'), null],",
         " [[new Element('h1', null, [new Text('Comments')]), new Text('')], ",
-        "[new Element('h1', null, [new Text('No comments')])]]])"
+        "[new Element('h1', null, [new Text('No comments')])]])"
       ].join('');
 
       expect(input).equal(output);
@@ -119,32 +117,44 @@ describe('The EachBlock Constructor', function() {
     'serialize method is called, it should resolve nested constructors',
     function() {
 
-      var input = new exp.EachBlock(
-        new exp.Expression('comments'), [
-          new exp.Element('h2', null, [
-            new exp.Text('By '), 
-            new exp.Block(
-              new exp.Expression('nonsense'),
-              [new exp.DynamicText(new exp.Expression('author'))]
+      var input = new templates.EachBlock(
+        new expressions.Expression('comments')
+      , [
+          new templates.Element('h2', null, [
+            new templates.Text('By ')
+          , new templates.Block(
+              new expressions.Expression('nonsense')
+            , [new templates.DynamicText(new expressions.Expression('author'))]
             )
-          ]), 
-          new exp.Element('div', {
-              'class': new exp.Attribute('body')
-            },
-            [new exp.DynamicText(new exp.Expression('body'))]
+          ])
+        , new templates.Element('div', {
+              'class': new templates.Attribute('body')
+            }
+          , [new templates.DynamicText(new expressions.Expression('body'))]
           )
-        ],
-        [new exp.Text('Lamers')]
+        ]
+      , [new templates.Text('Lamers')]
       ).serialize();
 
-      var output = [
-        "new Block(new Expression('comments'), ",
-        "[new Element('h2', null, [new Text('By '), ",
-        "new Block(new Expression('nonsense'), ",
-        "[new DynamicText(new Expression('author'))])]), ",
-        "new Element('div', {class: new Attribute('body')}, ",
-        "[new DynamicText(new Expression('body'))])])"
-      ].join('');
+      var output =
+        "new templates.EachBlock(" +
+          "new expressions.Expression('comments')" +
+        ", [" +
+            "new templates.Element('h2', null, [" +
+              "new templates.Text('By ')" +
+            ", new templates.Block(" +
+                "new expressions.Expression('nonsense')" +
+              ", [new templates.DynamicText(new expressions.Expression('author'))]" +
+              ")" +
+            "])" +
+          ", new templates.Element('div', {" +
+                "'class': new templates.Attribute('body')" +
+              "}" +
+            ", [new templates.DynamicText(new expressions.Expression('body'))]" +
+            ")" +
+          "]" +
+        ", [new templates.Text('Lamers')]" +
+        ")";
 
       expect(input).equal(output);
     }
@@ -157,7 +167,7 @@ describe('The Attribute Constructor', function() {
     'serialize method is called', 
     function() {
     
-      var input = new exp.Attribute('test').serialize();
+      var input = new templates.Attribute('test').serialize();
       var output = 'new Attribute(\'test\')';
       expect(input).equal(output);
     }
@@ -166,9 +176,9 @@ describe('The Attribute Constructor', function() {
   it(
     'should produce the same result when nested in Element attributes',
     function() {
-      var input = new exp.Element(
+      var input = new templates.Element(
         'div', {
-          'class': new exp.Attribute('post')
+          'class': new templates.Attribute('post')
         }
       ).serialize();
       var output = 'new Element(\'div\', {class: new Attribute(\'post\')})';
@@ -179,12 +189,12 @@ describe('The Attribute Constructor', function() {
   it(
     'should produce the same result when nested in Element that is nested',
     function() {
-      var input = new exp.Block(
+      var input = new templates.Block(
         {},
         [
-          new exp.Element(
+          new templates.Element(
             'div', {
-              'class': new exp.Attribute('post')
+              'class': new templates.Attribute('post')
             }
           )
         ]
