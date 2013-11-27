@@ -41,9 +41,9 @@ Expression.prototype.truthy = function(context) {
 };
 Expression.prototype.type = 'Expression';
 Expression.prototype.serialize = function() {
-  return this.serializer(this.source);
+  return this._serialize(this.source);
 };
-Expression.prototype.serializer = Template.prototype.serializer;
+Expression.prototype._serialize = Template.prototype._serialize;
 
 function ElseExpression() {}
 ElseExpression.prototype = new Expression();
@@ -95,13 +95,3 @@ Context.prototype._get = function(property) {
     this.data[property] :
     this.parent && this.parent._get(property);
 };
-Context.prototype.type = 'Context';
-Context.prototype.serialize = function() {
-  var values = [
-    this.meta, 
-    this.data, 
-    this.parent
-  ];
-  return Template.prototype.serializer.call(this, values);
-};
-
