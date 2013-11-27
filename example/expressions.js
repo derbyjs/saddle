@@ -39,6 +39,7 @@ Expression.prototype.get = function(context) {
 Expression.prototype.truthy = function(context) {
   return templateTruthy(this.get(context));
 };
+Expression.prototype.module = 'expressions';
 Expression.prototype.type = 'Expression';
 Expression.prototype.serialize = function() {
   return this._serialize(this.source);

@@ -104,6 +104,7 @@ Template.prototype.attachTo = function(parent, node, context) {
 Template.prototype.stringify = function(value) {
   return (value == null) ? '' : value + '';
 };
+Template.prototype.module = 'templates';
 Template.prototype.type = 'Template';
 Template.prototype.serialize = function() {
   return this._serialize(this.content);
@@ -121,41 +122,44 @@ Template.prototype._serialize = function() {
     if (arg !== 'void 0' && arg !== 'null') break;
     args.pop();
   }
-  return 'new ' + this.type + '(' + args.join(', ') + ')';
+  return 'new ' + this.module + '.' + this.type + '(' + args.join(', ') + ')';
 };
 
 function serializeValue(input) {
   if (input && input.serialize) {
     return input.serialize();
-  }
-  else if (typeof input == 'undefined') {
+
+  } else if (typeof input == 'undefined') {
     return 'void 0';
-  }
-  else if (input === null) {
+
+  } else if (input === null) {
     return 'null';
-  }
-  else if (typeof input === 'string') {
-    return '\'' + input + '\'';
-  }
-  else if (typeof input === 'number' || typeof input === 'boolean') {
+
+  } else if (typeof input === 'string') {
+    return quoteString(input);
+
+  } else if (typeof input === 'number' || typeof input === 'boolean') {
     return input + '';
-  }
-  else if (Array.isArray(input)) {
-    var tmp = [];
+
+  } else if (Array.isArray(input)) {
+    var items = [];
     for (var i = 0; i < input.length; i++) {
       var value = serializeValue(input[i]);
-      if (value) tmp.push(value);
+      items.push(value);
     }
-    return '[' + tmp.join(', ') + ']';
-  }
-  else if (typeof input == 'object') {
-    var tmp = [];
+    return '[' + items.join(', ') + ']';
+
+  } else if (typeof input == 'object') {
+    var items = [];
     for (var key in input) {
       var value = serializeValue(input[key]);
-      if (value) tmp.push(key + ': ' + value);
+      items.push(quoteString(key) + ': ' + value);
     }
-    return '{' + tmp.join(', ') + '}';
+    return '{' + items.join(', ') + '}';
   }
+}
+function quoteString(value) {
+  return '\'' + value.replace(/'/g, '\\\'') + '\'';
 }
 
 function Doctype(name, publicId, systemId) {
@@ -360,6 +364,7 @@ function Attribute(data) {
 Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
+Attribute.prototype.module = 'templates';
 Attribute.prototype.type = 'Attribute';
 Attribute.prototype.serialize = function() {
   return this._serialize(this.data);
