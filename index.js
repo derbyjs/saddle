@@ -364,11 +364,11 @@ function Attribute(data) {
 Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
-Attribute.prototype.module = 'templates';
 Attribute.prototype.type = 'Attribute';
 Attribute.prototype.serialize = function() {
   return this._serialize(this.data);
 };
+Attribute.prototype.module = Template.prototype.module;
 Attribute.prototype._serialize = Template.prototype._serialize;
 
 function DynamicAttribute(template) {
