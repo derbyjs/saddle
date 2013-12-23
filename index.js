@@ -370,9 +370,11 @@ function Element(tagName, attributes, content, hooks, selfClosing, notClosed) {
   this.selfClosing = selfClosing;
   this.notClosed = notClosed;
 
+  var lowerTagName = tagName.toLowerCase();
+  var isVoid = VOID_ELEMENTS[lowerTagName];
   this.startClose = (selfClosing) ? ' />' : '>';
-  var isVoid = VOID_ELEMENTS[tagName.toLowerCase()];
   this.endTag = (notClosed || isVoid) ? '' : '</' + tagName + '>';
+  this.unescapedContent = (lowerTagName === 'script' || lowerTagName === 'style');
 }
 Element.prototype = new Template();
 Element.prototype.get = function(context) {
@@ -387,7 +389,7 @@ Element.prototype.get = function(context) {
   }
   var startTag = '<' + tagItems.join(' ') + this.startClose;
   if (this.content) {
-    var inner = contentHtml(this.content, context);
+    var inner = contentHtml(this.content, context, this.unescapedContent);
     return startTag + inner + this.endTag;
   }
   return startTag + this.endTag;
