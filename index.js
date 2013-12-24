@@ -775,7 +775,9 @@ function attachError(node) {
   );
 }
 
-function Binding() {}
+function Binding() {
+  this.id = null;
+}
 Binding.prototype.update = function() {
   this.template.update(this.context, this);
 };
@@ -784,6 +786,7 @@ function NodeBinding(template, context, node) {
   this.template = template;
   this.context = context;
   this.node = node;
+  this.id = null;
   setNodeProperty(node, '$bindNode', this);
 }
 NodeBinding.prototype = new Binding();
@@ -794,6 +797,7 @@ function AttributeBinding(template, context, element, name) {
   this.context = context;
   this.element = element;
   this.name = name;
+  this.id = null;
   var map = element.$bindAttributes ||
     (element.$bindAttributes = new AttributeBindingsMap());
   map[name] = this;
@@ -806,6 +810,7 @@ function RangeBinding(template, context, start, end, isItem) {
   this.start = start;
   this.end = end;
   this.isItem = isItem;
+  this.id = null;
   setNodeProperty(start, '$bindStart', this);
   setNodeProperty(end, '$bindEnd', this);
 }
