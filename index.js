@@ -498,7 +498,7 @@ Block.prototype.serialize = function() {
 
 function ConditionalBlock(expressions, contents) {
   this.expressions = expressions;
-  this.beginning = expressions[0];
+  this.beginning = expressions.join('; ');
   this.ending = '/' + this.beginning;
   this.contents = contents;
 }
