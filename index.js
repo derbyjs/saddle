@@ -322,20 +322,20 @@ Attribute.prototype.serialize = function() {
   return serializeObject.instance(this, this.data);
 };
 
-function DynamicAttribute(template) {
-  // In attributes, template may be an instance of Template or Expression
-  this.template = template;
+function DynamicAttribute(expression) {
+  // In attributes, expression may be an instance of Template or Expression
+  this.expression = expression;
 }
 DynamicAttribute.prototype = new Attribute();
 DynamicAttribute.prototype.get = function(context) {
-  return getUnescapedValue(this.template, context);
+  return getUnescapedValue(this.expression, context);
 };
 DynamicAttribute.prototype.getBound = function(context, element, name) {
   context.addBinding(new AttributeBinding(this, context, element, name));
-  return getUnescapedValue(this.template, context);
+  return getUnescapedValue(this.expression, context);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
-  var value = getUnescapedValue(this.template, context);
+  var value = getUnescapedValue(this.expression, context);
   var propertyName = UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     if (value === void 0) value = null;
@@ -350,7 +350,7 @@ DynamicAttribute.prototype.update = function(context, binding) {
 };
 DynamicAttribute.prototype.type = 'DynamicAttribute';
 DynamicAttribute.prototype.serialize = function() {
-  return serializeObject.instance(this, this.template);
+  return serializeObject.instance(this, this.expression);
 };
 
 function getUnescapedValue(expression, context) {
@@ -778,6 +778,7 @@ function attachError(node) {
 function Binding() {
   this.id = null;
 }
+Binding.prototype.type = 'Binding';
 Binding.prototype.update = function() {
   this.template.update(this.context, this);
 };
@@ -790,6 +791,7 @@ function NodeBinding(template, context, node) {
   setNodeProperty(node, '$bindNode', this);
 }
 NodeBinding.prototype = new Binding();
+NodeBinding.prototype.type = 'NodeBinding';
 
 function AttributeBindingsMap() {}
 function AttributeBinding(template, context, element, name) {
@@ -803,6 +805,7 @@ function AttributeBinding(template, context, element, name) {
   map[name] = this;
 }
 AttributeBinding.prototype = new Binding();
+AttributeBinding.prototype.type = 'AttributeBinding';
 
 function RangeBinding(template, context, start, end, isItem) {
   this.template = template;
@@ -815,6 +818,7 @@ function RangeBinding(template, context, start, end, isItem) {
   setNodeProperty(end, '$bindEnd', this);
 }
 RangeBinding.prototype = new Binding();
+RangeBinding.prototype.type = 'RangeBinding';
 RangeBinding.prototype.insert = function(index, howMany) {
   this.template.insert(this.context, this, index, howMany);
 };
