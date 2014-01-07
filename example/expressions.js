@@ -53,10 +53,7 @@ ElseExpression.prototype.truthy = function() {
 ElseExpression.prototype.type = 'ElseExpression';
 
 function templateTruthy(value) {
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
-  return value != null && value !== false && value !== '';
+  return (Array.isArray(value)) ? value.length > 0 : !!value;
 }
 
 // Context classes should be implemented specific to the containing framework's
