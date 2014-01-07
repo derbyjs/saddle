@@ -732,6 +732,9 @@ function contentHtml(content, context, unescaped) {
 }
 function replaceRange(context, start, end, fragment, binding) {
   var parent = start.parentNode;
+  // This shouldn't happen if bindings are cleaned up properly, but check
+  // in case they aren't
+  if (!parent) return;
   if (start === end) {
     parent.replaceChild(fragment, start);
     emitRemoved(context, start, binding);
@@ -776,7 +779,7 @@ function attachError(node) {
 }
 
 function Binding() {
-  this.id = null;
+  this.meta = null;
 }
 Binding.prototype.type = 'Binding';
 Binding.prototype.update = function() {
@@ -787,7 +790,7 @@ function NodeBinding(template, context, node) {
   this.template = template;
   this.context = context;
   this.node = node;
-  this.id = null;
+  this.meta = null;
   setNodeProperty(node, '$bindNode', this);
 }
 NodeBinding.prototype = new Binding();
@@ -799,7 +802,7 @@ function AttributeBinding(template, context, element, name) {
   this.context = context;
   this.element = element;
   this.name = name;
-  this.id = null;
+  this.meta = null;
   var map = element.$bindAttributes ||
     (element.$bindAttributes = new AttributeBindingsMap());
   map[name] = this;
@@ -813,7 +816,7 @@ function RangeBinding(template, context, start, end, isItem) {
   this.start = start;
   this.end = end;
   this.isItem = isItem;
-  this.id = null;
+  this.meta = null;
   setNodeProperty(start, '$bindStart', this);
   setNodeProperty(end, '$bindEnd', this);
 }

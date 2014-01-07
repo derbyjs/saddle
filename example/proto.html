@@ -110,12 +110,12 @@ for (var i = 8; i--;) {
 var bindings = {};
 var count = 0;
 function addBinding(binding) {
-  var id = binding.id = ++count;
+  var id = binding.meta = ++count;
   bindings[id] = binding;
   // console.log('add', binding, id);
 }
 function removeBinding(binding) {
-  delete bindings[binding.id];
+  delete bindings[binding.meta];
   // console.log('remove', binding);
 }
 var contextMeta = {
