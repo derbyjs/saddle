@@ -131,9 +131,11 @@ Doctype.prototype.get = function() {
     '';
   return '<!DOCTYPE ' + this.name + publicText + systemText + '>';
 };
-Doctype.prototype.appendTo = function(parent) {
-  var node = document.implementation.createDocumentType(this.name, this.publicId, this.systemId);
-  parent.appendChild(node);
+Doctype.prototype.appendTo = function() {
+  // Doctype could be created via:
+  //   document.implementation.createDocumentType(this.name, this.publicId, this.systemId)
+  // However, it does not appear possible or useful to append it to the
+  // document fragment. Therefore, just don't render it in the browser
 };
 Doctype.prototype.attachTo = function(parent, node) {
   if (!node || node.nodeType !== 10) {
