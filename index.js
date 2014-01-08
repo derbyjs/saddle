@@ -137,7 +137,7 @@ Doctype.prototype.appendTo = function(parent) {
 };
 Doctype.prototype.attachTo = function(parent, node) {
   if (!node || node.nodeType !== 10) {
-    throw attachError(node);
+    throw attachError(parent, node);
   }
   return node.nextSibling;
 };
@@ -224,7 +224,7 @@ function attachText(parent, node, data, template, context) {
     // Split adjacent text nodes that would have been merged together in HTML
     var nextNode = splitData(node, data.length);
     if (node.data !== data) {
-      throw attachError(node);
+      throw attachError(parent, node);
     }
     addNodeBinding(template, context, node);
     return nextNode;
@@ -236,7 +236,7 @@ function attachText(parent, node, data, template, context) {
     addNodeBinding(template, context, newNode);
     return node;
   }
-  throw attachError(node);
+  throw attachError(parent, node);
 }
 
 function Comment(data) {
@@ -302,7 +302,7 @@ function attachComment(parent, node, data, template, context) {
     addNodeBinding(template, context, node);
     return node.nextSibling;
   }
-  throw attachError(node);
+  throw attachError(parent, node);
 }
 
 function addNodeBinding(template, context, node) {
@@ -418,7 +418,7 @@ Element.prototype.attachTo = function(parent, node, context) {
     node.nodeType !== 1 ||
     (node.tagName).toLowerCase() !== (this.tagName).toLowerCase()
   ) {
-    throw attachError(node);
+    throw attachError(parent, node);
   }
   emitHooks(this.hooks, context, node);
   for (var key in this.attributes) {
@@ -769,9 +769,9 @@ function emitRemoved(context, node, ignore) {
   }
 }
 
-function attachError(node) {
+function attachError(parent, node) {
   if (typeof console !== 'undefined') {
-    console.error('Attach failed at: ', node);
+    console.error('Attach failed for', node, 'within', parent);
   }
   return new Error('Attaching bindings failed, because HTML structure ' +
     'does not match client rendering.'
