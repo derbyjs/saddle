@@ -6,7 +6,7 @@
     "type": "git",
     "url": "https://github.com/codeparty/saddle2"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "./lib/index.js",
   "scripts": {
     "test": "mocha --recursive test --bail --colors --reporter spec --debug"
