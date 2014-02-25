@@ -12,7 +12,7 @@
     "test": "mocha --recursive test --bail --colors --reporter spec --debug"
   },
   "dependencies": {
-    "serialize-object": "~0.0.2"
+    "serialize-object": "~0.0.5"
   },
   "devDependencies": {
     "mocha": "~1.9.0",
