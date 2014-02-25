@@ -758,8 +758,13 @@ function getChildren(node) {
 }
 
 function getText(node) {
+  return node.textContent;
+}
+if (!document.createTextNode('x').textContent) {
   // IE only supports innerText, and it sometimes returns extra whitespace
-  return (node.textContent || node.innerText).replace(/\s/g, '');
+  getText = function(node) {
+    return node.innerText.replace(/\s/g, '');
+  };
 }
 
 function move(array, from, to, howMany) {
