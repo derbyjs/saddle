@@ -825,13 +825,25 @@ function RangeBinding(template, context, start, end, isItem) {
 RangeBinding.prototype = new Binding();
 RangeBinding.prototype.type = 'RangeBinding';
 RangeBinding.prototype.insert = function(index, howMany) {
-  this.template.insert(this.context, this, index, howMany);
+  if (this.template.insert) {
+    this.template.insert(this.context, this, index, howMany);
+  } else {
+    this.template.update(this.context, this);
+  }
 };
 RangeBinding.prototype.remove = function(index, howMany) {
-  this.template.remove(this.context, this, index, howMany);
+  if (this.template.remove) {
+    this.template.remove(this.context, this, index, howMany);
+  } else {
+    this.template.update(this.context, this);
+  }
 };
 RangeBinding.prototype.move = function(from, to, howMany) {
-  this.template.move(this.context, this, from, to, howMany);
+  if (this.template.move) {
+    this.template.move(this.context, this, from, to, howMany);
+  } else {
+    this.template.update(this.context, this);
+  }
 };
 
 
