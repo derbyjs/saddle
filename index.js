@@ -401,13 +401,13 @@ Element.prototype.appendTo = function(parent, context) {
   emitHooks(this.hooks, context, element);
   for (var key in this.attributes) {
     var value = this.attributes[key].getBound(context, element, key);
+    if (value == null) continue;
     var propertyName = CREATE_PROPERTIES[key];
     if (propertyName) {
-      if (value === void 0) value = null;
       element[propertyName] = value;
     } else if (value === true) {
       element.setAttribute(key, key);
-    } else if (value !== false && value != null) {
+    } else if (value !== false) {
       element.setAttribute(key, value);
     }
   }
