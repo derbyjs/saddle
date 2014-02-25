@@ -104,6 +104,7 @@ Template.prototype.appendTo = function(parent, context) {
 Template.prototype.attachTo = function(parent, node, context) {
   return attachContent(parent, node, this.content, context);
 };
+Template.prototype.update = function() {};
 Template.prototype.stringify = function(value) {
   return (value == null) ? '' : value + '';
 };
@@ -486,13 +487,6 @@ Block.prototype.attachTo = function(parent, node, context) {
   updateRange(context, null, this, start, end);
   return node;
 };
-Block.prototype.update = function(context, binding) {
-  // Get start and end in advance, since binding is mutated in getFragment
-  var start = binding.start;
-  var end = binding.end;
-  var fragment = this.getFragment(context, binding);
-  replaceRange(context, start, end, fragment, binding);
-};
 Block.prototype.type = 'Block';
 Block.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression, this.content);
@@ -503,6 +497,7 @@ function ConditionalBlock(expressions, contents) {
   this.beginning = expressions.join('; ');
   this.ending = '/' + this.beginning;
   this.contents = contents;
+  this.last = null;
 }
 ConditionalBlock.prototype = new Block();
 ConditionalBlock.prototype.get = function(context, unescaped) {
@@ -521,9 +516,11 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   var start = document.createComment(this.beginning);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
+  this.last = null;
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
+      this.last = i;
       var blockContext = context.child(expression);
       appendContent(parent, this.contents[i], blockContext);
       break;
@@ -536,9 +533,11 @@ ConditionalBlock.prototype.attachTo = function(parent, node, context) {
   var start = document.createComment(this.beginning);
   var end = document.createComment(this.ending);
   parent.insertBefore(start, node || null);
+  this.last = null;
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
+      this.last = i;
       var blockContext = context.child(expression);
       node = attachContent(parent, node, this.contents[i], blockContext);
       break;
@@ -551,6 +550,21 @@ ConditionalBlock.prototype.attachTo = function(parent, node, context) {
 ConditionalBlock.prototype.type = 'ConditionalBlock';
 ConditionalBlock.prototype.serialize = function() {
   return serializeObject.instance(this, this.expressions, this.contents);
+};
+ConditionalBlock.prototype.update = function(context, binding) {
+  var value = null;
+  for (var i = 0, len = this.expressions.length; i < len; i++) {
+    if (this.expressions[i].truthy(context)) {
+      value = i;
+      break;
+    }
+  }
+  if (value === this.last) return;
+  // Get start and end in advance, since binding is mutated in getFragment
+  var start = binding.start;
+  var end = binding.end;
+  var fragment = this.getFragment(context, binding);
+  replaceRange(context, start, end, fragment, binding);
 };
 
 function EachBlock(expression, content, elseContent) {
