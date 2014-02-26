@@ -365,18 +365,19 @@ function getUnescapedValue(expression, context) {
   return value;
 }
 
-function Element(tagName, attributes, content, hooks, selfClosing, notClosed) {
+function Element(tagName, attributes, content, hooks, selfClosing, notClosed, ns) {
   this.tagName = tagName;
   this.attributes = attributes;
   this.content = content;
   this.hooks = hooks;
   this.selfClosing = selfClosing;
   this.notClosed = notClosed;
+  this.ns = ns;
 
   var lowerTagName = tagName.toLowerCase();
   var isVoid = VOID_ELEMENTS[lowerTagName];
   this.startClose = (selfClosing) ? ' />' : '>';
-  this.endTag = (notClosed || isVoid) ? '' : '</' + tagName + '>';
+  this.endTag = (isVoid || selfClosing || notClosed) ? '' : '</' + tagName + '>';
   this.unescapedContent = (lowerTagName === 'script' || lowerTagName === 'style');
 }
 Element.prototype = new Template();
@@ -398,7 +399,9 @@ Element.prototype.get = function(context) {
   return startTag + this.endTag;
 };
 Element.prototype.appendTo = function(parent, context) {
-  var element = document.createElement(this.tagName);
+  var element = (this.ns) ?
+    document.createElementNS(this.ns, this.tagName) :
+    document.createElement(this.tagName);
   emitHooks(this.hooks, context, element);
   for (var key in this.attributes) {
     var value = this.attributes[key].getBound(context, element, key);
@@ -443,6 +446,7 @@ Element.prototype.serialize = function() {
   , this.hooks
   , this.selfClosing
   , this.notClosed
+  , this.ns
   );
 };
 
