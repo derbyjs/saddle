@@ -60,10 +60,17 @@ var VOID_ELEMENTS = {
 , wbr: true
 };
 
+var NAMESPACE_URIS = {
+  svg: 'http://www.w3.org/2000/svg'
+, xlink: 'http://www.w3.org/1999/xlink'
+, xmlns: 'http://www.w3.org/2000/xmlns/'
+};
+
 module.exports = {
   CREATE_PROPERTIES: CREATE_PROPERTIES
 , UPDATE_PROPERTIES: UPDATE_PROPERTIES
 , VOID_ELEMENTS: VOID_ELEMENTS
+, NAMESPACE_URIS: NAMESPACE_URIS
 
   // Template Classes
 , Template: Template
@@ -313,8 +320,9 @@ function addNodeBinding(template, context, node) {
   context.addBinding(new NodeBinding(template, context, node));
 }
 
-function Attribute(data) {
+function Attribute(data, ns) {
   this.data = data;
+  this.ns = ns;
 }
 Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
@@ -322,12 +330,13 @@ Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
 Attribute.prototype.module = Template.prototype.module;
 Attribute.prototype.type = 'Attribute';
 Attribute.prototype.serialize = function() {
-  return serializeObject.instance(this, this.data);
+  return serializeObject.instance(this, this.data, this.ns);
 };
 
-function DynamicAttribute(expression) {
+function DynamicAttribute(expression, ns) {
   // In attributes, expression may be an instance of Template or Expression
   this.expression = expression;
+  this.ns = ns;
 }
 DynamicAttribute.prototype = new Attribute();
 DynamicAttribute.prototype.get = function(context) {
@@ -340,20 +349,30 @@ DynamicAttribute.prototype.getBound = function(context, element, name) {
 DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
   var propertyName = UPDATE_PROPERTIES[binding.name];
+  var element = binding.element;
   if (propertyName) {
     if (value === void 0) value = null;
-    binding.element[propertyName] = value;
-  } else if (value === false || value == null) {
-    binding.element.removeAttribute(binding.name);
-  } else if (value === true) {
-    binding.element.setAttribute(binding.name, binding.name);
+    element[propertyName] = value;
+    return;
+  }
+  if (value === false || value == null) {
+    if (this.ns) {
+      element.removeAttributeNS(this.ns, binding.name);
+    } else {
+      element.removeAttribute(binding.name);
+    }
+    return;
+  }
+  if (value === true) value = binding.name;
+  if (this.ns) {
+    element.setAttributeNS(this.ns, binding.name, value);
   } else {
-    binding.element.setAttribute(binding.name, value);
+    element.setAttribute(binding.name, value);
   }
 };
 DynamicAttribute.prototype.type = 'DynamicAttribute';
 DynamicAttribute.prototype.serialize = function() {
-  return serializeObject.instance(this, this.expression);
+  return serializeObject.instance(this, this.expression, this.ns);
 };
 
 function getUnescapedValue(expression, context) {
@@ -404,14 +423,18 @@ Element.prototype.appendTo = function(parent, context) {
     document.createElement(this.tagName);
   emitHooks(this.hooks, context, element);
   for (var key in this.attributes) {
-    var value = this.attributes[key].getBound(context, element, key);
+    var attribute = this.attributes[key];
+    var value = attribute.getBound(context, element, key);
     if (value == null) continue;
     var propertyName = CREATE_PROPERTIES[key];
     if (propertyName) {
       element[propertyName] = value;
-    } else if (value === true) {
-      element.setAttribute(key, key);
-    } else if (value !== false) {
+      continue;
+    }
+    if (value === true) value = key;
+    if (attribute.ns) {
+      element.setAttributeNS(attribute.ns, key, value);
+    } else {
       element.setAttribute(key, value);
     }
   }
