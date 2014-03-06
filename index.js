@@ -348,7 +348,7 @@ DynamicAttribute.prototype.getBound = function(context, element, name) {
 };
 DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
-  var propertyName = UPDATE_PROPERTIES[binding.name];
+  var propertyName = !element.ns && UPDATE_PROPERTIES[binding.name];
   var element = binding.element;
   if (propertyName) {
     if (value === void 0) value = null;
@@ -426,7 +426,7 @@ Element.prototype.appendTo = function(parent, context) {
     var attribute = this.attributes[key];
     var value = attribute.getBound(context, element, key);
     if (value == null) continue;
-    var propertyName = CREATE_PROPERTIES[key];
+    var propertyName = !this.ns && CREATE_PROPERTIES[key];
     if (propertyName) {
       element[propertyName] = value;
       continue;
