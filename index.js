@@ -348,8 +348,8 @@ DynamicAttribute.prototype.getBound = function(context, element, name) {
 };
 DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
-  var propertyName = !element.ns && UPDATE_PROPERTIES[binding.name];
   var element = binding.element;
+  var propertyName = !element.ns && UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     if (value === void 0) value = null;
     element[propertyName] = value;
