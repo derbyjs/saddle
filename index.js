@@ -899,12 +899,14 @@ function mergeInto(from, to) {
 }
 
 function escapeHtml(string) {
+  string = string + '';
   return string.replace(/[&<]/g, function(match) {
     return (match === '&') ? '&amp;' : '&lt;';
   });
 }
 
 function escapeAttribute(string) {
+  string = string + '';
   return string.replace(/[&"]/g, function(match) {
     return (match === '&') ? '&amp;' : '&quot;';
   });
