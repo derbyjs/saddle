@@ -101,7 +101,7 @@ tunnel.start(function (status) {
       res.failed.forEach(function (failure) {
         console.warn('  %s', failure.fullTitle)
         if (failure.error.stack) {
-          failure.error.stack.split('\n').forEach(function (l) {
+          failure.error.stack.forEach(function (line) {
             console.warn('    %s', line)
           })
         } else {

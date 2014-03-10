@@ -7,6 +7,7 @@
 <div id="fixture"></div>
 
 <div id="mocha"></div>
+<script src="../node_modules/stacktrace-js/stacktrace.js"></script>
 <script src="../node_modules/expect.js/expect.js"></script>
 <script src="../node_modules/mocha/mocha.js"></script>
 <script>mocha.setup('bdd')</script>
@@ -37,7 +38,7 @@
         fullTitle: test.fullTitle(),
         error: {
           message: err.message,
-          stack: err.stack
+          stack: printStackTrace({e: err})
         }
       });
     });
