@@ -29,7 +29,7 @@
 <script>
   (function () {
     mocha.checkLeaks();
-    var runner = mocha.run();
+    var runner = window.mochaPhantomJS ? mochaPhantomJS.run() : mocha.run();
     var failed = [];
 
     runner.on('fail', function(test, err){
