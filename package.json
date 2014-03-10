@@ -9,7 +9,7 @@
   "version": "0.2.0",
   "main": "./lib/index.js",
   "scripts": {
-    "test": "mocha --recursive test --bail --colors --reporter spec --debug"
+    "test": "./node_modules/.bin/mocha test/*.mocha.js"
   },
   "dependencies": {
     "serialize-object": "~0.0.5"
