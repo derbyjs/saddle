@@ -27,5 +27,5 @@
 
 <script>
   mocha.checkLeaks();
-  mocha.run();
+  window.mochaPhantomJS ? mochaPhantomJS.run() : mocha.run();
 </script>

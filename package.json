@@ -9,13 +9,15 @@
   "version": "0.2.0",
   "main": "./lib/index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha test/*.mocha.js"
+    "test": "./node_modules/.bin/mocha test/*.mocha.js && ./node_modules/.bin/mocha-phantomjs -p node_modules/.bin/phantomjs test/index.html"
   },
   "dependencies": {
     "serialize-object": "~0.0.5"
   },
   "devDependencies": {
     "mocha": "~1.9.0",
+    "mocha-phantomjs": "~3.3.2",
+    "phantomjs": "^1.9.1",
     "expect.js": "~0.2.0"
   },
   "optionalDependencies": {}
