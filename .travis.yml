@@ -4,7 +4,7 @@ node_js:
 script: npm test && node test/sauce.js
 env:
   global:
-  - SAUCE_CONCURRENCY: 3
+  - SAUCE_CONCURRENCY: 1
   - SAUCE_USERNAME: saddle
   - secure: c+KiJEDkoqy3OM9ZXW6GXUsvEWILv37XgazBdyIeKAZFDgahxFM88oDV6+/VeN8zbbY1XcbUKxnGFEvyYSc4F6K4OUTviPARCZGyoZ2f7y2HjYlv/F6Hfq8Xc899HV612/WFcXIZtYz5leM9Xjdvg0FR6/i2mbfHY+NYbgavSXA=
 
