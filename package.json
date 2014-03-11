@@ -9,12 +9,14 @@
   "version": "0.2.0",
   "main": "./lib/index.js",
   "scripts": {
+    "watcher": "./node_modules/.bin/gulp watch",
     "test": "./node_modules/.bin/mocha test/*.mocha.js && ./node_modules/.bin/mocha-phantomjs -p node_modules/.bin/phantomjs test/index.html"
   },
   "dependencies": {
     "serialize-object": "~0.0.5"
   },
   "devDependencies": {
+    "gulp": "~3.5.5",
     "mocha-cloud": "https://github.com/MatthewMueller/mocha-cloud/archive/0.1.0.tar.gz",
     "stacktrace-js": "https://github.com/stacktracejs/stacktrace.js/archive/v0.6.0.tar.gz",
     "node-static": "~0.7.3",
