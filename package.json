@@ -1,10 +1,10 @@
 {
   "name": "saddle",
   "description": "A bindings engine for rendering HTML or creating DOM nodes directly",
-  "homepage": "https://github.com/codeparty/saddle2",
+  "homepage": "https://github.com/codeparty/saddle",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeparty/saddle2"
+    "url": "https://github.com/codeparty/saddle"
   },
   "version": "0.2.0",
   "main": "./lib/index.js",
