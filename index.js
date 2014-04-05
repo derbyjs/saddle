@@ -425,7 +425,7 @@ Element.prototype.appendTo = function(parent, context) {
   for (var key in this.attributes) {
     var attribute = this.attributes[key];
     var value = attribute.getBound(context, element, key);
-    if (value == null) continue;
+    if (value === false || value == null) continue;
     var propertyName = !this.ns && CREATE_PROPERTIES[key];
     if (propertyName) {
       element[propertyName] = value;
