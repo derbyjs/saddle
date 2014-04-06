@@ -828,6 +828,15 @@ Binding.prototype.type = 'Binding';
 Binding.prototype.update = function() {
   this.template.update(this.context, this);
 };
+Binding.prototype.insert = function() {
+  this.update();
+};
+Binding.prototype.remove = function() {
+  this.update();
+};
+Binding.prototype.move = function() {
+  this.update();
+};
 
 function NodeBinding(template, context, node) {
   this.template = template;
