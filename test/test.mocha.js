@@ -488,39 +488,6 @@ function testBindingUpdates(render) {
     expect(node.className).equal('message');
   });
 
-  it('updates a Block', function() {
-    var template = new saddle.Template([
-      new saddle.Block(new expressions.Expression('author'), [
-        new saddle.Element('h3', null, [
-          new saddle.DynamicText(new expressions.Expression('name'))
-        ])
-      , new saddle.DynamicText(new expressions.Expression('name'))
-      ])
-    ]);
-    var binding = render(template).pop();
-    var children = getChildren(fixture);
-    expect(children.length).equal(1);
-    expect(children[0].tagName.toLowerCase()).equal('h3');
-    expect(getText(children[0])).equal('');
-    expect(getText(fixture)).equal('');
-    // Update entire block context
-    binding.context = getContext({author: {name: 'John'}});
-    binding.update();
-    var children = getChildren(fixture);
-    expect(children.length).equal(1);
-    expect(children[0].tagName.toLowerCase()).equal('h3');
-    expect(getText(children[0])).equal('John');
-    expect(getText(fixture)).equal('JohnJohn');
-    // Reset to no data
-    binding.context = getContext();
-    binding.update();
-    var children = getChildren(fixture);
-    expect(children.length).equal(1);
-    expect(children[0].tagName.toLowerCase()).equal('h3');
-    expect(getText(children[0])).equal('');
-    expect(getText(fixture)).equal('');
-  });
-
   it('updates a single condition ConditionalBlock', function() {
     var template = new saddle.Template([
       new saddle.ConditionalBlock([
