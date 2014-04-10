@@ -66,35 +66,33 @@ var NAMESPACE_URIS = {
 , xmlns: 'http://www.w3.org/2000/xmlns/'
 };
 
-module.exports = {
-  CREATE_PROPERTIES: CREATE_PROPERTIES
-, UPDATE_PROPERTIES: UPDATE_PROPERTIES
-, VOID_ELEMENTS: VOID_ELEMENTS
-, NAMESPACE_URIS: NAMESPACE_URIS
+exports.CREATE_PROPERTIES = CREATE_PROPERTIES;
+exports.UPDATE_PROPERTIES = UPDATE_PROPERTIES;
+exports.VOID_ELEMENTS = VOID_ELEMENTS;
+exports.NAMESPACE_URIS = NAMESPACE_URIS;
 
-  // Template Classes
-, Template: Template
-, Doctype: Doctype
-, Text: Text
-, DynamicText: DynamicText
-, Comment: Comment
-, DynamicComment: DynamicComment
-, Html: Html
-, DynamicHtml: DynamicHtml
-, Element: Element
-, Block: Block
-, ConditionalBlock: ConditionalBlock
-, EachBlock: EachBlock
+// Template Classes
+exports.Template = Template;
+exports.Doctype = Doctype;
+exports.Text = Text;
+exports.DynamicText = DynamicText;
+exports.Comment = Comment;
+exports.DynamicComment = DynamicComment;
+exports.Html = Html;
+exports.DynamicHtml = DynamicHtml;
+exports.Element = Element;
+exports.Block = Block;
+exports.ConditionalBlock = ConditionalBlock;
+exports.EachBlock = EachBlock;
 
-, Attribute: Attribute
-, DynamicAttribute: DynamicAttribute
+exports.Attribute = Attribute;
+exports.DynamicAttribute = DynamicAttribute;
 
-  // Binding Classes
-, Binding: Binding
-, NodeBinding: NodeBinding
-, AttributeBinding: AttributeBinding
-, RangeBinding: RangeBinding
-};
+// Binding Classes
+exports.Binding = Binding;
+exports.NodeBinding = NodeBinding;
+exports.AttributeBinding = AttributeBinding;
+exports.RangeBinding = RangeBinding;
 
 function Template(content) {
   this.content = content;

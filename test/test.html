@@ -12,11 +12,17 @@
 <script>mocha.setup('bdd')</script>
 
 <script>
-  var module = {};
+  var exports = {};
+  var module = {exports: exports};
 </script>
 <script src="../index.js"></script>
 <script>
   var saddle = module.exports;
+</script>
+
+<script>
+  var exports = {};
+  var module = {exports: exports};
 </script>
 <script src="../example/expressions.js"></script>
 <script>
