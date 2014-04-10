@@ -710,7 +710,7 @@ EachBlock.prototype.appendTo = function(parent, context, binding) {
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.eachChild(i);
-      this.appendItemTo(parent, itemContext);
+      this.appendItemTo(parent, itemContext, start);
     }
   } else if (this.elseContent) {
     appendContent(parent, this.elseContent, listContext);
@@ -718,7 +718,7 @@ EachBlock.prototype.appendTo = function(parent, context, binding) {
   parent.appendChild(end);
   updateRange(context, binding, this, start, end);
 };
-EachBlock.prototype.appendItemTo = function(parent, context, binding) {
+EachBlock.prototype.appendItemTo = function(parent, context, itemFor, binding) {
   var before = parent.lastChild;
   var start, end;
   appendContent(parent, this.content, context);
@@ -729,7 +729,7 @@ EachBlock.prototype.appendItemTo = function(parent, context, binding) {
     start = (before && before.nextSibling) || parent.firstChild;
     end = parent.lastChild;
   }
-  updateRange(context, binding, this, start, end, true);
+  updateRange(context, binding, this, start, end, itemFor);
 };
 EachBlock.prototype.attachTo = function(parent, node, context) {
   var items = this.expression.get(context);
@@ -740,7 +740,7 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
       var itemContext = listContext.eachChild(i);
-      node = this.attachItemTo(parent, node, itemContext);
+      node = this.attachItemTo(parent, node, itemContext, start);
     }
   } else if (this.elseContent) {
     node = attachContent(parent, node, this.elseContent, listContext);
@@ -749,7 +749,7 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
   updateRange(context, null, this, start, end);
   return node;
 };
-EachBlock.prototype.attachItemTo = function(parent, node, context) {
+EachBlock.prototype.attachItemTo = function(parent, node, context, itemFor) {
   var start, end;
   var nextNode = attachContent(parent, node, this.content, context);
   if (nextNode === node) {
@@ -759,15 +759,15 @@ EachBlock.prototype.attachItemTo = function(parent, node, context) {
     start = node;
     end = (nextNode && nextNode.previousSibling) || parent.lastChild;
   }
-  updateRange(context, null, this, start, end, true);
+  updateRange(context, null, this, start, end, itemFor);
   return nextNode;
 };
 EachBlock.prototype.update = function(context, binding) {
   var start = binding.start;
   var end = binding.end;
-  if (binding.isItem) {
+  if (binding.itemFor) {
     var fragment = document.createDocumentFragment();
-    this.appendItemTo(fragment, context, binding);
+    this.appendItemTo(fragment, context, binding.itemFor, binding);
   } else {
     var fragment = this.getFragment(context, binding);
   }
@@ -776,41 +776,41 @@ EachBlock.prototype.update = function(context, binding) {
 EachBlock.prototype.insert = function(context, binding, index, howMany) {
   var items = this.expression.get(context);
   var listContext = context.child(this.expression);
-  var node = indexStartNode(binding.start, index, binding.end);
+  var node = indexStartNode(binding, index);
   var fragment = document.createDocumentFragment();
   for (var i = index, len = index + howMany; i < len; i++) {
     var itemContext = listContext.eachChild(i);
-    this.appendItemTo(fragment, itemContext);
+    this.appendItemTo(fragment, itemContext, binding.start);
   }
   binding.start.parentNode.insertBefore(fragment, node || null);
 };
 EachBlock.prototype.remove = function(context, binding, index, howMany) {
-  var node = indexStartNode(binding.start, index, binding.end);
+  var node = indexStartNode(binding, index);
   var i = 0;
   var parent = binding.start.parentNode;
   while (node) {
     var nextNode = node.nextSibling;
     parent.removeChild(node);
     emitRemoved(context, node, binding);
-    if (node.$bindEnd) {
+    if (node.$bindEnd && node.$bindEnd.itemFor === binding.start) {
       if (howMany === ++i) return;
     }
     node = nextNode;
   }
 };
 EachBlock.prototype.move = function(context, binding, from, to, howMany) {
-  var node = indexStartNode(binding.start, from, binding.end);
+  var node = indexStartNode(binding, from);
   var fragment = document.createDocumentFragment();
   var i = 0;
   while (node) {
     var nextNode = node.nextSibling;
     fragment.appendChild(node);
-    if (node.$bindEnd) {
+    if (node.$bindEnd && node.$bindEnd.itemFor === binding.start) {
       if (howMany === ++i) break;
     }
     node = nextNode;
   }
-  node = indexStartNode(binding.start, to, binding.end);
+  node = indexStartNode(binding, to);
   binding.start.parentNode.insertBefore(fragment, node || null);
 };
 EachBlock.prototype.type = 'EachBlock';
@@ -818,25 +818,26 @@ EachBlock.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression, this.content, this.elseContent);
 };
 
-function indexStartNode(node, index, endBound) {
+function indexStartNode(binding, index) {
+  var node = binding.start;
   var i = 0;
   while (node = node.nextSibling) {
-    if (node === endBound) return node;
-    if (node.$bindStart) {
+    if (node === binding.end) return node;
+    if (node.$bindStart && node.$bindStart.itemFor === binding.start) {
       if (index === i) return node;
       i++;
     }
   }
 }
 
-function updateRange(context, binding, template, start, end, isItem) {
+function updateRange(context, binding, template, start, end, itemFor) {
   if (binding) {
     binding.start = start;
     binding.end = end;
     setNodeProperty(start, '$bindStart', binding);
     setNodeProperty(end, '$bindEnd', binding);
   } else {
-    context.addBinding(new RangeBinding(template, context, start, end, isItem));
+    context.addBinding(new RangeBinding(template, context, start, end, itemFor));
   }
 }
 
@@ -947,12 +948,12 @@ function AttributeBinding(template, context, element, name) {
 AttributeBinding.prototype = new Binding();
 AttributeBinding.prototype.type = 'AttributeBinding';
 
-function RangeBinding(template, context, start, end, isItem) {
+function RangeBinding(template, context, start, end, itemFor) {
   this.template = template;
   this.context = context;
   this.start = start;
   this.end = end;
-  this.isItem = isItem;
+  this.itemFor = itemFor;
   this.meta = null;
   setNodeProperty(start, '$bindStart', this);
   setNodeProperty(end, '$bindEnd', this);
