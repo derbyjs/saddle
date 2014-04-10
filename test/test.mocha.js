@@ -762,6 +762,99 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('2two4four1one');
   });
 
+  it('inserts to outer nested each', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
+      , new saddle.EachBlock(new expressions.Expression('subitems'), [
+          new saddle.DynamicText(new expressions.Expression(null))
+        ])
+      ])
+    ]);
+    var binding = render(template).pop();
+    expect(getText(fixture)).equal('');
+    // Insert from null state
+    var data = {items: [
+      {name: 'One', subitems: [1, 2, 3]}
+    , {name: 'Two', subitems: [2, 4, 6]}
+    , {name: 'Three', subitems: [3, 6, 9]}
+    ]};
+    binding.context = getContext(data);
+    binding.insert(0, 3);
+    expect(getText(fixture)).equal('One123Two246Three369');
+    // Insert new items
+    data.items.splice(
+      1
+    , 0
+    , {name: 'Four', subitems: [4, 8, 12]}
+    , {name: 'Five', subitems: [5, 10, 15]}
+    );
+    binding.insert(1, 2);
+    expect(getText(fixture)).equal('One123Four4812Five51015Two246Three369');
+    // Insert new items again
+    data.items.splice(
+      2
+    , 0
+    , {name: 'Six', subitems: [6, 12, 18]}
+    );
+    binding.insert(2, 1);
+    expect(getText(fixture)).equal('One123Four4812Six61218Five51015Two246Three369');
+  });
+
+  it('removes from outer nested each', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
+      , new saddle.EachBlock(new expressions.Expression('subitems'), [
+          new saddle.DynamicText(new expressions.Expression(null))
+        ])
+      ])
+    ]);
+    var data = {items: [
+      {name: 'One', subitems: [1, 2, 3]}
+    , {name: 'Two', subitems: [2, 4, 6]}
+    , {name: 'Three', subitems: [3, 6, 9]}
+    ]};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('One123Two246Three369');
+    binding.context = getContext(data);
+    // Remove inner item
+    data.items.splice(1, 1);
+    binding.remove(1, 1);
+    expect(getText(fixture)).equal('One123Three369');
+    // Remove multiple remaining
+    data.items.splice(0, 2);
+    binding.remove(0, 2);
+    expect(getText(fixture)).equal('');
+  });
+
+  it('moves to outer nested each', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
+      , new saddle.EachBlock(new expressions.Expression('subitems'), [
+          new saddle.DynamicText(new expressions.Expression(null))
+        ])
+      ])
+    ]);
+    var data = {items: [
+      {name: 'One', subitems: [1, 2, 3]}
+    , {name: 'Two', subitems: [2, 4, 6]}
+    , {name: 'Three', subitems: [3, 6, 9]}
+    ]};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('One123Two246Three369');
+    binding.context = getContext(data);
+    // Move one item
+    move(data.items, 1, 2, 1);
+    binding.move(1, 2, 1);
+    expect(getText(fixture)).equal('One123Three369Two246');
+    // Move multiple items
+    move(data.items, 1, 0, 2);
+    binding.move(1, 0, 2);
+    expect(getText(fixture)).equal('Three369Two246One123');
+  });
+
   // TODO: Should Saddle take care of these edge cases, or should the containing
   // framework be smart enough to call binding.update() in these cases instead
   // of binding.insert() / binding.remove()?
