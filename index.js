@@ -79,6 +79,8 @@ module.exports = {
 , DynamicText: DynamicText
 , Comment: Comment
 , DynamicComment: DynamicComment
+, Html: Html
+, DynamicHtml: DynamicHtml
 , Element: Element
 , Block: Block
 , ConditionalBlock: ConditionalBlock
@@ -318,6 +320,91 @@ function attachComment(parent, node, data, template, context) {
 function addNodeBinding(template, context, node) {
   if (!context) return;
   context.addBinding(new NodeBinding(template, context, node));
+}
+
+function Html(data) {
+  this.data = data;
+}
+Html.prototype = new Template();
+Html.prototype.get = function() {
+  return this.data;
+};
+Html.prototype.appendTo = function(parent) {
+  var fragment = createHtmlFragment(parent, this.data);
+  parent.appendChild(fragment);
+};
+Html.prototype.attachTo = function(parent, node) {
+  return attachHtml(parent, node, this.data);
+};
+Html.prototype.type = "Html";
+Html.prototype.serialize = function() {
+  return serializeObject.instance(this, this.data);
+};
+
+function DynamicHtml(expression) {
+  this.expression = expression;
+  this.ending = '/' + expression;
+}
+DynamicHtml.prototype = new Template();
+DynamicHtml.prototype.get = function(context) {
+  var value = getUnescapedValue(this.expression, context);
+  return this.stringify(value);
+};
+DynamicHtml.prototype.appendTo = function(parent, context, binding) {
+  var start = document.createComment(this.expression);
+  var end = document.createComment(this.ending);
+  var value = getUnescapedValue(this.expression, context);
+  var html = this.stringify(value);
+  var fragment = createHtmlFragment(parent, html);
+  parent.appendChild(start);
+  parent.appendChild(fragment);
+  parent.appendChild(end);
+  updateRange(context, binding, this, start, end);
+};
+DynamicHtml.prototype.attachTo = function(parent, node, context) {
+  var start = document.createComment(this.expression);
+  var end = document.createComment(this.ending);
+  var value = getUnescapedValue(this.expression, context);
+  var html = this.stringify(value);
+  parent.insertBefore(start, node || null);
+  node = attachHtml(parent, node, html);
+  parent.insertBefore(end, node || null);
+  updateRange(context, null, this, start, end);
+  return node;
+};
+DynamicHtml.prototype.update = function(context, binding) {
+  // Get start and end in advance, since binding is mutated in getFragment
+  var start = binding.start;
+  var end = binding.end;
+  var value = getUnescapedValue(this.expression, context);
+  var html = this.stringify(value);
+  var fragment = createHtmlFragment(binding.start.parentNode, html);
+  replaceRange(context, start, end, fragment, binding);
+};
+DynamicHtml.prototype.type = 'DynamicHtml';
+DynamicHtml.prototype.serialize = function() {
+  return serializeObject.instance(this, this.expression);
+};
+
+function createHtmlFragment(parent, html) {
+  if (parent.nodeType === 1) {
+    var range = document.createRange();
+    range.selectNodeContents(parent);
+    return range.createContextualFragment(html);
+  }
+  var div = document.createElement('div');
+  var range = document.createRange();
+  div.innerHTML = html;
+  range.selectNodeContents(div);
+  return range.extractContents();
+}
+function attachHtml(parent, node, html) {
+  var fragment = createHtmlFragment(parent, html);
+  for (var i = 0, len = fragment.childNodes.length; i < len; i++) {
+    if (!node) throw attachError(parent, node);
+    node = node.nextSibling;
+  }
+  return node;
 }
 
 function Attribute(data, ns) {
@@ -953,6 +1040,8 @@ function setNodeProperty(node, key, value) {
 (function() {
   // Don't try to shim in Node.js environment
   if (typeof document === 'undefined') return;
+
+  // TODO: Shim createHtmlFragment for old IE
 
   // TODO: Shim setAttribute('style'), which doesn't work in IE <=7
   // http://webbugtrack.blogspot.com/2007/10/bug-245-setattribute-style-does-not.html

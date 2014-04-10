@@ -198,6 +198,43 @@ function testStaticRendering(test) {
     });
   });
 
+  it('renders raw HTML', function() {
+    test({
+      template: new saddle.Html('<div>Hi</div><input>')
+    , html: '<div>Hi</div><input>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(2);
+        var node = fragment.childNodes[0];
+        expect(node.tagName.toLowerCase()).equal('div');
+        expect(node.innerHTML).equal('Hi');
+        var node = fragment.childNodes[1];
+        expect(node.tagName.toLowerCase()).equal('input');
+      }
+    });
+  });
+
+  it('renders <tr> from HTML within tbody context', function() {
+    test({
+      template: new saddle.Element('table', null, [
+        new saddle.Element('tbody', null, [
+          new saddle.Html('<tr><td>Hi</td></tr>')
+        ])
+      ])
+    , html: '<table><tbody><tr><td>Hi</td></tr></tbody></table>'
+    , fragment: function(fragment) {
+        var node = fragment.firstChild;
+        expect(node.tagName.toLowerCase()).equal('table');
+        node = node.firstChild;
+        expect(node.tagName.toLowerCase()).equal('tbody');
+        node = node.firstChild;
+        expect(node.tagName.toLowerCase()).equal('tr');
+        node = node.firstChild;
+        expect(node.tagName.toLowerCase()).equal('td');
+        expect(node.innerHTML).equal('Hi');
+      }
+    });
+  });
+
   it('renders <input> value attribute', function() {
     test({
       template: new saddle.Element('input', {
@@ -345,6 +382,21 @@ describe('attachTo', function() {
     renderAndAttach(template);
   });
 
+  it('attaches to <tr> from HTML within tbody context', function() {
+    var template = new saddle.Element('table', null, [
+      new saddle.Element('tbody', null, [
+        new saddle.Comment('OK')
+      , new saddle.Html('<tr><td>Hi</td></tr>')
+      , new saddle.Element('tr', null, [
+          new saddle.Element('td', null, [
+            new Text('Ho')
+          ])
+        ])
+      ])
+    ]);
+    renderAndAttach(template);
+  });
+
   it('traverses with comments in a table and select', function() {
     // IE fails to create comments in certain locations when parsing HTML
     var template = new saddle.Template([
@@ -459,6 +511,26 @@ function testBindingUpdates(render) {
     binding.context = getContext({comment: 'Bye'});
     binding.update();
     expect(fixture.innerHTML).equal('<!--Bye-->');
+  });
+
+  it('updates raw HTML', function() {
+    var template = new saddle.Template([
+      new saddle.DynamicHtml(new expressions.Expression('html'))
+    , new Element('div')
+    ]);
+    var binding = render(template, {html: '<b>Hi</b>'}).pop();
+    var children = getChildren(fixture);
+    expect(children.length).equal(2);
+    expect(children[0].tagName.toLowerCase()).equal('b');
+    expect(children[0].innerHTML).equal('Hi');
+    expect(children[1].tagName.toLowerCase()).equal('div');
+    binding.context = getContext({html: '<i>What?</i>'});
+    binding.update();
+    var children = getChildren(fixture);
+    expect(children.length).equal(2);
+    expect(children[0].tagName.toLowerCase()).equal('i');
+    expect(children[0].innerHTML).equal('What?');
+    expect(children[1].tagName.toLowerCase()).equal('div');
   });
 
   it('updates an Element attribute', function() {
