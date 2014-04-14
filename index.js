@@ -908,6 +908,10 @@ function Binding() {
 Binding.prototype.type = 'Binding';
 Binding.prototype.update = function() {
   this.template.update(this.context, this);
+
+  if (this.node && this.node.parentElement.tagName === 'TEXTAREA') {
+    this.node.parentElement.value = this.node.data;
+  }
 };
 Binding.prototype.insert = function() {
   this.update();
@@ -1007,7 +1011,7 @@ function escapeAttribute(string) {
 //// IE shims & workarounds ////
 
 // General notes:
-// 
+//
 // In all cases, Node.insertBefore should have `|| null` after its second
 // argument. IE works correctly when the argument is ommitted or equal
 // to null, but it throws and error if it is equal to undefined.
@@ -1048,7 +1052,7 @@ function setNodeProperty(node, key, value) {
 
   // In IE, input.defaultValue doesn't work correctly, so use input.value,
   // which mistakenly but conveniently sets both the value property and attribute.
-  // 
+  //
   // Surprisingly, in IE <=7, input.defaultChecked must be used instead of
   // input.checked before the input is in the document.
   // http://webbugtrack.blogspot.com/2007/11/bug-299-setattribute-checked-does-not.html
