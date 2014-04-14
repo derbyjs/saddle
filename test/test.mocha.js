@@ -855,6 +855,32 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('Three369Two246One123');
   });
 
+  it('updates an if inside an each', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.ConditionalBlock([
+          new expressions.Expression('flag'),
+          new expressions.ElseExpression()
+        ], [
+          [new saddle.Text('A')],
+          [new saddle.Text('B')]
+        ])
+      ])
+    ]);
+    var data = {items: [0, 1], flag: true};
+    var bindings = render(template, data);
+    expect(getText(fixture)).equal('AA');
+
+    var eachBinding = bindings[4];
+    var if1Binding = bindings[2];
+    var if2Binding = bindings[0];
+
+    eachBinding.context.data.flag = false;
+    if1Binding.update();
+    if2Binding.update();
+    expect(getText(fixture)).equal('BB');
+  });
+
   // TODO: Should Saddle take care of these edge cases, or should the containing
   // framework be smart enough to call binding.update() in these cases instead
   // of binding.insert() / binding.remove()?

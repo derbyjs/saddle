@@ -610,7 +610,6 @@ function ConditionalBlock(expressions, contents) {
   this.beginning = expressions.join('; ');
   this.ending = '/' + this.beginning;
   this.contents = contents;
-  this.last = null;
 }
 ConditionalBlock.prototype = new Block();
 ConditionalBlock.prototype.get = function(context, unescaped) {
@@ -629,35 +628,35 @@ ConditionalBlock.prototype.appendTo = function(parent, context, binding) {
   var start = document.createComment(this.beginning);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
-  this.last = null;
+  var condition;
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
-      this.last = i;
+      condition = i;
       var blockContext = context.child(expression);
       appendContent(parent, this.contents[i], blockContext);
       break;
     }
   }
   parent.appendChild(end);
-  updateRange(context, binding, this, start, end);
+  updateRange(context, binding, this, start, end, null, condition);
 };
 ConditionalBlock.prototype.attachTo = function(parent, node, context) {
   var start = document.createComment(this.beginning);
   var end = document.createComment(this.ending);
   parent.insertBefore(start, node || null);
-  this.last = null;
+  var condition;
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     var expression = this.expressions[i];
     if (expression.truthy(context)) {
-      this.last = i;
+      condition = i;
       var blockContext = context.child(expression);
       node = attachContent(parent, node, this.contents[i], blockContext);
       break;
     }
   }
   parent.insertBefore(end, node || null);
-  updateRange(context, null, this, start, end);
+  updateRange(context, null, this, start, end, null, condition);
   return node;
 };
 ConditionalBlock.prototype.type = 'ConditionalBlock';
@@ -665,14 +664,15 @@ ConditionalBlock.prototype.serialize = function() {
   return serializeObject.instance(this, this.expressions, this.contents);
 };
 ConditionalBlock.prototype.update = function(context, binding) {
-  var value = null;
+  var condition;
   for (var i = 0, len = this.expressions.length; i < len; i++) {
     if (this.expressions[i].truthy(context)) {
-      value = i;
+      condition = i;
       break;
     }
   }
-  if (value === this.last) return;
+  if (condition === binding.condition) return;
+  binding.condition = condition;
   // Get start and end in advance, since binding is mutated in getFragment
   var start = binding.start;
   var end = binding.end;
@@ -831,14 +831,15 @@ function indexStartNode(binding, index) {
   }
 }
 
-function updateRange(context, binding, template, start, end, itemFor) {
+function updateRange(context, binding, template, start, end, itemFor, condition) {
   if (binding) {
     binding.start = start;
     binding.end = end;
+    binding.condition = condition;
     setNodeProperty(start, '$bindStart', binding);
     setNodeProperty(end, '$bindEnd', binding);
   } else {
-    context.addBinding(new RangeBinding(template, context, start, end, itemFor));
+    context.addBinding(new RangeBinding(template, context, start, end, itemFor, condition));
   }
 }
 
@@ -949,12 +950,13 @@ function AttributeBinding(template, context, element, name) {
 AttributeBinding.prototype = new Binding();
 AttributeBinding.prototype.type = 'AttributeBinding';
 
-function RangeBinding(template, context, start, end, itemFor) {
+function RangeBinding(template, context, start, end, itemFor, condition) {
   this.template = template;
   this.context = context;
   this.start = start;
   this.end = end;
   this.itemFor = itemFor;
+  this.condition = null;
   this.meta = null;
   setNodeProperty(start, '$bindStart', this);
   setNodeProperty(end, '$bindEnd', this);
