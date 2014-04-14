@@ -377,7 +377,8 @@ DynamicHtml.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
   var html = this.stringify(value);
   var fragment = createHtmlFragment(binding.start.parentNode, html);
-  replaceRange(context, start, end, fragment, binding);
+  var innerOnly = true;
+  replaceRange(context, start, end, fragment, binding, innerOnly);
 };
 DynamicHtml.prototype.type = 'DynamicHtml';
 DynamicHtml.prototype.serialize = function() {
@@ -849,7 +850,7 @@ function contentHtml(content, context, unescaped) {
   }
   return html;
 }
-function replaceRange(context, start, end, fragment, binding) {
+function replaceRange(context, start, end, fragment, binding, innerOnly) {
   var parent = start.parentNode;
   // This shouldn't happen if bindings are cleaned up properly, but check
   // in case they aren't
@@ -859,12 +860,16 @@ function replaceRange(context, start, end, fragment, binding) {
     emitRemoved(context, start, binding);
     return;
   }
-  // Remove all nodes from start to end, inclusive
-  var node = start;
+  // Remove all nodes from start to end
+  var node = (innerOnly) ? start.nextSibling : start;
   var nextNode;
   while (node) {
     nextNode = node.nextSibling;
     emitRemoved(context, node, binding);
+    if (innerOnly && node === end) {
+      nextNode = end;
+      break;
+    }
     parent.removeChild(node);
     if (node === end) break;
     node = nextNode;

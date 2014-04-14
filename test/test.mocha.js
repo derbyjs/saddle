@@ -531,6 +531,12 @@ function testBindingUpdates(render) {
     expect(children[0].tagName.toLowerCase()).equal('i');
     expect(children[0].innerHTML).equal('What?');
     expect(children[1].tagName.toLowerCase()).equal('div');
+    binding.context = getContext({html: 'Hola'});
+    binding.update();
+    var children = getChildren(fixture);
+    expect(children.length).equal(1);
+    expect(getText(fixture)).equal('Hola');
+    expect(children[0].tagName.toLowerCase()).equal('div');
   });
 
   it('updates an Element attribute', function() {
