@@ -81,6 +81,7 @@ exports.DynamicComment = DynamicComment;
 exports.Html = Html;
 exports.DynamicHtml = DynamicHtml;
 exports.Element = Element;
+exports.DynamicElement = DynamicElement;
 exports.Block = Block;
 exports.ConditionalBlock = ConditionalBlock;
 exports.EachBlock = EachBlock;
@@ -480,15 +481,22 @@ function Element(tagName, attributes, content, hooks, selfClosing, notClosed, ns
   this.notClosed = notClosed;
   this.ns = ns;
 
-  var lowerTagName = tagName.toLowerCase();
-  var isVoid = VOID_ELEMENTS[lowerTagName];
-  this.startClose = (selfClosing) ? ' />' : '>';
-  this.endTag = (isVoid || selfClosing || notClosed) ? '' : '</' + tagName + '>';
+  this.endTag = getEndTag(tagName, selfClosing, notClosed);
+  this.startClose = getStartClose(selfClosing);
+  var lowerTagName = tagName && tagName.toLowerCase();
   this.unescapedContent = (lowerTagName === 'script' || lowerTagName === 'style');
 }
 Element.prototype = new Template();
+Element.prototype.getTagName = function() {
+  return this.tagName;
+};
+Element.prototype.getEndTag = function() {
+  return this.endTag;
+};
 Element.prototype.get = function(context) {
-  var tagItems = [this.tagName];
+  var tagName = this.getTagName(context);
+  var endTag = this.getEndTag(tagName);
+  var tagItems = [tagName];
   for (var key in this.attributes) {
     var value = this.attributes[key].get(context);
     if (value === true) {
@@ -500,14 +508,15 @@ Element.prototype.get = function(context) {
   var startTag = '<' + tagItems.join(' ') + this.startClose;
   if (this.content) {
     var inner = contentHtml(this.content, context, this.unescapedContent);
-    return startTag + inner + this.endTag;
+    return startTag + inner + endTag;
   }
-  return startTag + this.endTag;
+  return startTag + endTag;
 };
 Element.prototype.appendTo = function(parent, context) {
+  var tagName = this.getTagName(context);
   var element = (this.ns) ?
-    document.createElementNS(this.ns, this.tagName) :
-    document.createElement(this.tagName);
+    document.createElementNS(this.ns, tagName) :
+    document.createElement(tagName);
   emitHooks(this.hooks, context, element);
   for (var key in this.attributes) {
     var attribute = this.attributes[key];
@@ -529,10 +538,11 @@ Element.prototype.appendTo = function(parent, context) {
   parent.appendChild(element);
 };
 Element.prototype.attachTo = function(parent, node, context) {
+  var tagName = this.getTagName(context);
   if (
     !node ||
     node.nodeType !== 1 ||
-    (node.tagName).toLowerCase() !== (this.tagName).toLowerCase()
+    node.tagName.toLowerCase() !== tagName.toLowerCase()
   ) {
     throw attachError(parent, node);
   }
@@ -559,6 +569,37 @@ Element.prototype.serialize = function() {
   , this.ns
   );
 };
+
+function DynamicElement(tagName, attributes, content, hooks, selfClosing, notClosed, ns) {
+  this.tagName = tagName;
+  this.attributes = attributes;
+  this.content = content;
+  this.hooks = hooks;
+  this.selfClosing = selfClosing;
+  this.notClosed = notClosed;
+  this.ns = ns;
+
+  this.startClose = getStartClose(selfClosing);
+  this.unescapedContent = false;
+}
+DynamicElement.prototype = new Element();
+DynamicElement.prototype.getTagName = function(context) {
+  return getUnescapedValue(this.tagName, context);
+};
+DynamicElement.prototype.getEndTag = function(tagName) {
+  return getEndTag(tagName, this.selfClosing, this.notClosed);
+};
+DynamicElement.prototype.type = 'DynamicElement';
+
+function getStartClose(selfClosing) {
+  return (selfClosing) ? ' />' : '>';
+}
+
+function getEndTag(tagName, selfClosing, notClosed) {
+  var lowerTagName = tagName && tagName.toLowerCase();
+  var isVoid = VOID_ELEMENTS[lowerTagName];
+  return (isVoid || selfClosing || notClosed) ? '' : '</' + tagName + '>';
+}
 
 function getAttributeValue(element, name) {
   var propertyName = UPDATE_PROPERTIES[name];
