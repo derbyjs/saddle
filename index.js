@@ -990,7 +990,7 @@ function RangeBinding(template, context, start, end, itemFor, condition) {
   this.start = start;
   this.end = end;
   this.itemFor = itemFor;
-  this.condition = null;
+  this.condition = condition;
   this.meta = null;
   setNodeProperty(start, '$bindStart', this);
   setNodeProperty(end, '$bindEnd', this);
@@ -1048,7 +1048,7 @@ function escapeAttribute(string) {
 //// IE shims & workarounds ////
 
 // General notes:
-// 
+//
 // In all cases, Node.insertBefore should have `|| null` after its second
 // argument. IE works correctly when the argument is ommitted or equal
 // to null, but it throws and error if it is equal to undefined.
@@ -1089,7 +1089,7 @@ function setNodeProperty(node, key, value) {
 
   // In IE, input.defaultValue doesn't work correctly, so use input.value,
   // which mistakenly but conveniently sets both the value property and attribute.
-  // 
+  //
   // Surprisingly, in IE <=7, input.defaultChecked must be used instead of
   // input.checked before the input is in the document.
   // http://webbugtrack.blogspot.com/2007/11/bug-299-setattribute-checked-does-not.html
