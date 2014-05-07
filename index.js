@@ -646,6 +646,13 @@ Block.prototype.type = 'Block';
 Block.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression, this.content);
 };
+Block.prototype.update = function(context, binding) {
+  // Get start and end in advance, since binding is mutated in getFragment
+  var start = binding.start;
+  var end = binding.end;
+  var fragment = this.getFragment(context, binding);
+  replaceRange(context, start, end, fragment, binding);
+};
 
 function ConditionalBlock(expressions, contents) {
   this.expressions = expressions;
