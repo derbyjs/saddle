@@ -976,6 +976,9 @@ function NodeBinding(template, context, node) {
 }
 NodeBinding.prototype = new Binding();
 NodeBinding.prototype.type = 'NodeBinding';
+NodeBinding.prototype.isUnbound = function() {
+  return false;
+}
 
 function AttributeBindingsMap() {}
 function AttributeBinding(template, context, element, name) {
