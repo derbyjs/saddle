@@ -232,6 +232,7 @@ function attachText(parent, node, data, template, context) {
       addNodeBinding(template, context, node);
       return node.nextSibling;
     }
+    data = normalizeLineBreaks(data);
     // Split adjacent text nodes that would have been merged together in HTML
     var nextNode = splitData(node, data.length);
     if (node.data !== data) {
@@ -1052,7 +1053,7 @@ function escapeAttribute(string) {
 }
 
 
-//// IE shims & workarounds ////
+//// Shims & workarounds ////
 
 // General notes:
 //
@@ -1080,9 +1081,32 @@ function setNodeProperty(node, key, value) {
   return node[key] = value;
 }
 
+function normalizeLineBreaks(string) {
+  return string;
+}
+
 (function() {
   // Don't try to shim in Node.js environment
   if (typeof document === 'undefined') return;
+
+  var div = document.createElement('div');
+  div.innerHTML = '\r\n<br>\n'
+  var windowsLength = div.firstChild.data.length;
+  var unixLength = div.lastChild.data.length;
+  if (windowsLength === 1 && unixLength === 1) {
+    normalizeLineBreaks = function(string) {
+      return string.replace(/\r\n/g, '\n');
+    };
+  } else if (windowsLength === 2 && unixLength === 2) {
+    normalizeLineBreaks = function(string) {
+      return string.replace(/(^|[^\r])(\n+)/g, function(match, value, newLines) {
+        for (var i = newLines.length; i--;) {
+          value += '\r\n';
+        }
+        return value;
+      });
+    };
+  }
 
   // TODO: Shim createHtmlFragment for old IE
 
