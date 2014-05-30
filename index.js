@@ -425,19 +425,21 @@ function DynamicAttribute(expression, ns) {
   // In attributes, expression may be an instance of Template or Expression
   this.expression = expression;
   this.ns = ns;
+  this.elementNs = null;
 }
 DynamicAttribute.prototype = new Attribute();
 DynamicAttribute.prototype.get = function(context) {
   return getUnescapedValue(this.expression, context);
 };
-DynamicAttribute.prototype.getBound = function(context, element, name) {
+DynamicAttribute.prototype.getBound = function(context, element, name, elementNs) {
+  this.elementNs = elementNs;
   context.addBinding(new AttributeBinding(this, context, element, name));
   return getUnescapedValue(this.expression, context);
 };
 DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
   var element = binding.element;
-  var propertyName = !element.ns && UPDATE_PROPERTIES[binding.name];
+  var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
     if (propertyName === 'value' && (element.value === value || element.valueAsNumber === value)) return;
     if (value === void 0) value = null;
@@ -521,7 +523,7 @@ Element.prototype.appendTo = function(parent, context) {
   emitHooks(this.hooks, context, element);
   for (var key in this.attributes) {
     var attribute = this.attributes[key];
-    var value = attribute.getBound(context, element, key);
+    var value = attribute.getBound(context, element, key, this.ns);
     if (value === false || value == null) continue;
     var propertyName = !this.ns && CREATE_PROPERTIES[key];
     if (propertyName) {
@@ -550,7 +552,7 @@ Element.prototype.attachTo = function(parent, node, context) {
   emitHooks(this.hooks, context, node);
   for (var key in this.attributes) {
     // Get each attribute to create bindings
-    this.attributes[key].getBound(context, node, key);
+    this.attributes[key].getBound(context, node, key, this.ns);
     // TODO: Ideally, this would also check that the node's current attributes
     // are equivalent, but there are some tricky edge cases
   }
