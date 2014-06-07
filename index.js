@@ -261,7 +261,7 @@ Comment.prototype.get = function() {
 };
 Comment.prototype.appendTo = function(parent, context) {
   var node = document.createComment(this.data);
-  emitHooks(this.hooks, context, element);
+  emitHooks(this.hooks, context, node);
   parent.appendChild(node);
 };
 Comment.prototype.attachTo = function(parent, node, context) {
@@ -934,6 +934,7 @@ function replaceRange(context, start, end, fragment, binding, innerOnly) {
   parent.insertBefore(fragment, nextNode || null);
 }
 function emitRemoved(context, node, ignore) {
+  context.removeNode(node);
   var binding = node.$bindNode;
   if (binding && binding !== ignore) context.removeBinding(binding);
   binding = node.$bindStart;
