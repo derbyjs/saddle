@@ -79,6 +79,9 @@ Context.prototype.addBinding = function(binding) {
 Context.prototype.removeBinding = function(binding) {
   this.meta.removeBinding(binding);
 };
+Context.prototype.removeNode = function(node) {
+  this.meta.removeNode(node);
+};
 Context.prototype.child = function(expression) {
   var data = expression.get(this);
   return new Context(this.meta, data, this);

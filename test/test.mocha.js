@@ -933,6 +933,7 @@ function getContext(data, bindings) {
       bindings && bindings.push(binding);
     }
   , removeBinding: function() {}
+  , removeNode: function() {}
   };
   return new expressions.Context(contextMeta, data);
 }
