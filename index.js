@@ -251,27 +251,30 @@ function attachText(parent, node, data, template, context) {
   throw attachError(parent, node);
 }
 
-function Comment(data) {
+function Comment(data, hooks) {
   this.data = data;
+  this.hooks = hooks;
 }
 Comment.prototype = new Template();
 Comment.prototype.get = function() {
   return '<!--' + this.data + '-->';
 };
-Comment.prototype.appendTo = function(parent) {
+Comment.prototype.appendTo = function(parent, context) {
   var node = document.createComment(this.data);
+  emitHooks(this.hooks, context, element);
   parent.appendChild(node);
 };
-Comment.prototype.attachTo = function(parent, node) {
-  return attachComment(parent, node, this.data);
+Comment.prototype.attachTo = function(parent, node, context) {
+  return attachComment(parent, node, this.data, this, context);
 };
 Comment.prototype.type = 'Comment';
 Comment.prototype.serialize = function() {
-  return serializeObject.instance(this, this.data);
+  return serializeObject.instance(this, this.data, this.hooks);
 }
 
-function DynamicComment(expression) {
+function DynamicComment(expression, hooks) {
   this.expression = expression;
+  this.hooks = hooks;
 }
 DynamicComment.prototype = new Template();
 DynamicComment.prototype.get = function(context) {
@@ -297,7 +300,7 @@ DynamicComment.prototype.update = function(context, binding) {
 };
 DynamicComment.prototype.type = 'DynamicComment';
 DynamicComment.prototype.serialize = function() {
-  return serializeObject.instance(this, this.expression);
+  return serializeObject.instance(this, this.expression, this.hooks);
 }
 
 function attachComment(parent, node, data, template, context) {
@@ -318,8 +321,10 @@ function attachComment(parent, node, data, template, context) {
 }
 
 function addNodeBinding(template, context, node) {
-  if (!context) return;
-  context.addBinding(new NodeBinding(template, context, node));
+  emitHooks(template.hooks, context, node);
+  if (template.expression) {
+    context.addBinding(new NodeBinding(template, context, node));
+  }
 }
 
 function Html(data) {
