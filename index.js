@@ -356,16 +356,17 @@ DynamicHtml.prototype.get = function(context) {
   return this.stringify(value);
 };
 DynamicHtml.prototype.appendTo = function(parent, context, binding) {
-  if (this.expression.meta.bindType !== 'unbound') {
+  var bound = this.expression.meta.bindType !== 'unbound';
+  if (bound) {
     var start = document.createComment(this.expression);
     var end = document.createComment(this.ending);
   }
   var value = getUnescapedValue(this.expression, context);
   var html = this.stringify(value);
   var fragment = createHtmlFragment(parent, html);
-  if (this.expression.meta.bindType !== 'unbound') parent.appendChild(start);
+  if (bound) parent.appendChild(start);
   parent.appendChild(fragment);
-  if (this.expression.meta.bindType !== 'unbound') {
+  if (bound) {
     parent.appendChild(end);
     updateRange(context, binding, this, start, end);
   }
