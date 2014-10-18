@@ -356,15 +356,19 @@ DynamicHtml.prototype.get = function(context) {
   return this.stringify(value);
 };
 DynamicHtml.prototype.appendTo = function(parent, context, binding) {
-  var start = document.createComment(this.expression);
-  var end = document.createComment(this.ending);
+  if (this.expression.meta.bindType !== 'unbound') {
+    var start = document.createComment(this.expression);
+    var end = document.createComment(this.ending);
+  }
   var value = getUnescapedValue(this.expression, context);
   var html = this.stringify(value);
   var fragment = createHtmlFragment(parent, html);
-  parent.appendChild(start);
+  if (this.expression.meta.bindType !== 'unbound') parent.appendChild(start);
   parent.appendChild(fragment);
-  parent.appendChild(end);
-  updateRange(context, binding, this, start, end);
+  if (this.expression.meta.bindType !== 'unbound') {
+    parent.appendChild(end);
+    updateRange(context, binding, this, start, end);
+  }
 };
 DynamicHtml.prototype.attachTo = function(parent, node, context) {
   var start = document.createComment(this.expression);
