@@ -19,8 +19,8 @@ if (typeof require === 'function') {
 }
 
 module.exports = {
-  Expression: Expression, 
-  ElseExpression: ElseExpression, 
+  Expression: Expression,
+  ElseExpression: ElseExpression,
   Context: Context
 };
 
@@ -31,8 +31,8 @@ Expression.prototype.toString = function() {
   return this.source;
 };
 Expression.prototype.get = function(context) {
-  return ((this.source == null) 
-    ? context.data 
+  return ((this.source == null)
+    ? context.data
     : context._get(this.source)
   );
 };
@@ -86,8 +86,8 @@ Context.prototype.child = function(expression) {
   var data = expression.get(this);
   return new Context(this.meta, data, this);
 };
-Context.prototype.eachChild = function(index) {
-  var data = this.data[index];
+Context.prototype.eachChild = function(expression, index) {
+  var data = expression.get(this)[index];
   return new Context(this.meta, data, this);
 };
 Context.prototype._get = function(property) {

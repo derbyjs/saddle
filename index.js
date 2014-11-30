@@ -734,32 +734,30 @@ function EachBlock(expression, content, elseContent) {
 EachBlock.prototype = new Block();
 EachBlock.prototype.get = function(context, unescaped) {
   var items = this.expression.get(context);
-  var listContext = context.child(this.expression);
   if (items && items.length) {
     var html = '';
     for (var i = 0, len = items.length; i < len; i++) {
-      var itemContext = listContext.eachChild(i);
+      var itemContext = context.eachChild(this.expression, i);
       html += contentHtml(this.content, itemContext, unescaped);
     }
     return html;
   } else if (this.elseContent) {
-    return contentHtml(this.elseContent, listContext, unescaped);
+    return contentHtml(this.elseContent, context, unescaped);
   }
   return '';
 };
 EachBlock.prototype.appendTo = function(parent, context, binding) {
   var items = this.expression.get(context);
-  var listContext = context.child(this.expression);
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
   parent.appendChild(start);
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
-      var itemContext = listContext.eachChild(i);
+      var itemContext = context.eachChild(this.expression, i);
       this.appendItemTo(parent, itemContext, start);
     }
   } else if (this.elseContent) {
-    appendContent(parent, this.elseContent, listContext);
+    appendContent(parent, this.elseContent, context);
   }
   parent.appendChild(end);
   updateRange(context, binding, this, start, end);
@@ -779,17 +777,16 @@ EachBlock.prototype.appendItemTo = function(parent, context, itemFor, binding) {
 };
 EachBlock.prototype.attachTo = function(parent, node, context) {
   var items = this.expression.get(context);
-  var listContext = context.child(this.expression);
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
   parent.insertBefore(start, node || null);
   if (items && items.length) {
     for (var i = 0, len = items.length; i < len; i++) {
-      var itemContext = listContext.eachChild(i);
+      var itemContext = context.eachChild(this.expression, i);
       node = this.attachItemTo(parent, node, itemContext, start);
     }
   } else if (this.elseContent) {
-    node = attachContent(parent, node, this.elseContent, listContext);
+    node = attachContent(parent, node, this.elseContent, context);
   }
   parent.insertBefore(end, node || null);
   updateRange(context, null, this, start, end);
@@ -820,12 +817,10 @@ EachBlock.prototype.update = function(context, binding) {
   replaceRange(context, start, end, fragment, binding);
 };
 EachBlock.prototype.insert = function(context, binding, index, howMany) {
-  var items = this.expression.get(context);
-  var listContext = context.child(this.expression);
   var node = indexStartNode(binding, index);
   var fragment = document.createDocumentFragment();
   for (var i = index, len = index + howMany; i < len; i++) {
-    var itemContext = listContext.eachChild(i);
+    var itemContext = context.eachChild(this.expression, i);
     this.appendItemTo(fragment, itemContext, binding.start);
   }
   binding.start.parentNode.insertBefore(fragment, node || null);
