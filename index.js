@@ -393,7 +393,7 @@ DynamicHtml.prototype.serialize = function() {
 };
 
 function createHtmlFragment(parent, html) {
-  if (parent.nodeType === 1) {
+  if (parent && parent.nodeType === 1) {
     var range = document.createRange();
     range.selectNodeContents(parent);
     return range.createContextualFragment(html);
