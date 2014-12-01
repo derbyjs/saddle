@@ -635,19 +635,21 @@ Block.prototype.appendTo = function(parent, context, binding) {
   var blockContext = context.child(this.expression);
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
+  var condition = this.getCondition(context);
   parent.appendChild(start);
   appendContent(parent, this.content, blockContext);
   parent.appendChild(end);
-  updateRange(context, binding, this, start, end);
+  updateRange(context, binding, this, start, end, null, condition);
 };
 Block.prototype.attachTo = function(parent, node, context) {
   var blockContext = context.child(this.expression);
   var start = document.createComment(this.expression);
   var end = document.createComment(this.ending);
+  var condition = this.getCondition(context);
   parent.insertBefore(start, node || null);
   node = attachContent(parent, node, this.content, blockContext);
   parent.insertBefore(end, node || null);
-  updateRange(context, null, this, start, end);
+  updateRange(context, null, this, start, end, null, condition);
   return node;
 };
 Block.prototype.type = 'Block';
@@ -655,11 +657,27 @@ Block.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression, this.content);
 };
 Block.prototype.update = function(context, binding) {
+  var condition = this.getCondition(context);
+  if (condition === binding.condition) return;
+  binding.condition = condition;
   // Get start and end in advance, since binding is mutated in getFragment
   var start = binding.start;
   var end = binding.end;
   var fragment = this.getFragment(context, binding);
   replaceRange(context, start, end, fragment, binding);
+};
+Block.prototype.getCondition = function(context) {
+  // We do an identity check to see if the value has changed before updating.
+  // With objects, the object would still be the same, so this identity check
+  // would fail to update enough. Thus, return NaN, which never equals anything
+  // including itself, so that we always update on objects.
+  //
+  // We could also JSON stringify or use some other hashing approach. However,
+  // that could be really expensive on gets of things that never change, and
+  // is probably not a good tradeoff. Perhaps there should be a separate block
+  // type that is only used in the case of dynamic updates
+  var value = this.expression.get(context);
+  return (typeof value === 'object') ? NaN : value;
 };
 
 function ConditionalBlock(expressions, contents) {
