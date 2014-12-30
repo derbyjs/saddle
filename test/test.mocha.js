@@ -796,7 +796,7 @@ function testBindingUpdates(render) {
       new saddle.EachBlock(new expressions.Expression('items'), [
         new saddle.DynamicText(new expressions.Expression('name'))
       , new saddle.EachBlock(new expressions.Expression('subitems'), [
-          new saddle.DynamicText(new expressions.Expression(null))
+          new saddle.DynamicText(new expressions.Expression())
         ])
       ])
     ]);
@@ -829,7 +829,7 @@ function testBindingUpdates(render) {
       new saddle.EachBlock(new expressions.Expression('items'), [
         new saddle.DynamicText(new expressions.Expression('name'))
       , new saddle.EachBlock(new expressions.Expression('subitems'), [
-          new saddle.DynamicText(new expressions.Expression(null))
+          new saddle.DynamicText(new expressions.Expression())
         ])
       ])
     ]);
@@ -854,7 +854,7 @@ function testBindingUpdates(render) {
       new saddle.EachBlock(new expressions.Expression('items'), [
         new saddle.DynamicText(new expressions.Expression('name'))
       , new saddle.EachBlock(new expressions.Expression('subitems'), [
-          new saddle.DynamicText(new expressions.Expression(null))
+          new saddle.DynamicText(new expressions.Expression())
         ])
       ])
     ]);
@@ -894,10 +894,13 @@ function testBindingUpdates(render) {
     var if1Binding = bindings[2];
     var if2Binding = bindings[0];
 
-    eachBinding.context.data.flag = false;
+    data.flag = false;
     if1Binding.update();
     if2Binding.update();
     expect(getText(fixture)).equal('BB');
+
+    remove(eachBinding, data.items, 0, 1);
+    expect(getText(fixture)).equal('B');
   });
 
   // TODO: Should Saddle take care of these edge cases, or should the containing
