@@ -558,7 +558,7 @@ function testBindingUpdates(render) {
     binding.context = getContext({greeting: 'Hi'});
     binding.update();
     expect(node.getAttribute('data-greeting')).equal('Hi');
-    // Remove value
+    // Clear value
     binding.context = getContext();
     binding.update();
     expect(node.getAttribute('data-greeting')).eql(null);
@@ -714,15 +714,12 @@ function testBindingUpdates(render) {
     var binding = render(template).pop();
     expect(getText(fixture)).equal('');
     // Insert from null state
-    var data = {items: [
-      {name: 'One'}, {name: 'Two'}, {name: 'Three'}
-    ]};
+    var data = {items: []};
     binding.context = getContext(data);
-    binding.insert(0, 3);
+    insert(binding, data.items, 0, [{name: 'One'}, {name: 'Two'}, {name: 'Three'}]);
     expect(getText(fixture)).equal('OneTwoThree');
     // Insert new items
-    data.items.splice(1, 0, {name: 'Four'}, {name: 'Five'});
-    binding.insert(1, 2);
+    insert(binding, data.items, 1, [{name: 'Four'}, {name: 'Five'}]);
     expect(getText(fixture)).equal('OneFourFiveTwoThree');
   });
 
@@ -739,12 +736,10 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('OneTwoThree');
     binding.context = getContext(data);
     // Remove inner item
-    data.items.splice(1, 1);
-    binding.remove(1, 1);
+    remove(binding, data.items, 1, 1);
     expect(getText(fixture)).equal('OneThree');
     // Remove multiple remaining
-    data.items.splice(0, 2);
-    binding.remove(0, 2);
+    remove(binding, data.items, 0, 2);
     expect(getText(fixture)).equal('');
   });
 
@@ -761,12 +756,10 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('OneTwoThree');
     binding.context = getContext(data);
     // Move one item
-    move(data.items, 1, 2, 1);
-    binding.move(1, 2, 1);
+    move(binding, data.items, 1, 2, 1);
     expect(getText(fixture)).equal('OneThreeTwo');
     // Move multiple items
-    move(data.items, 1, 0, 2);
-    binding.move(1, 0, 2);
+    move(binding, data.items, 1, 0, 2);
     expect(getText(fixture)).equal('ThreeTwoOne');
   });
 
@@ -788,16 +781,13 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('1one2two3three');
     binding.context = getContext(data);
     // Insert an item
-    data.items.splice(2, 0, {title: '4', text: 'four'})
-    binding.insert(2, 1);
+    insert(binding, data.items, 2, [{title: '4', text: 'four'}]);
     expect(getText(fixture)).equal('1one2two4four3three');
     // Move items
-    move(data.items, 1, 0, 3);
-    binding.move(1, 0, 3);
+    move(binding, data.items, 1, 0, 3);
     expect(getText(fixture)).equal('2two4four3three1one');
     // Remove an item
-    data.items.splice(2, 1);
-    binding.remove(2, 1);
+    remove(binding, data.items, 2, 1);
     expect(getText(fixture)).equal('2two4four1one');
   });
 
@@ -813,30 +803,24 @@ function testBindingUpdates(render) {
     var binding = render(template).pop();
     expect(getText(fixture)).equal('');
     // Insert from null state
-    var data = {items: [
+    var data = {items: []};
+    binding.context = getContext(data);
+    insert(binding, data.items, 0, [
       {name: 'One', subitems: [1, 2, 3]}
     , {name: 'Two', subitems: [2, 4, 6]}
     , {name: 'Three', subitems: [3, 6, 9]}
-    ]};
-    binding.context = getContext(data);
-    binding.insert(0, 3);
+    ]);
     expect(getText(fixture)).equal('One123Two246Three369');
     // Insert new items
-    data.items.splice(
-      1
-    , 0
-    , {name: 'Four', subitems: [4, 8, 12]}
+    insert(binding, data.items, 1, [
+      {name: 'Four', subitems: [4, 8, 12]}
     , {name: 'Five', subitems: [5, 10, 15]}
-    );
-    binding.insert(1, 2);
+    ]);
     expect(getText(fixture)).equal('One123Four4812Five51015Two246Three369');
     // Insert new items again
-    data.items.splice(
-      2
-    , 0
-    , {name: 'Six', subitems: [6, 12, 18]}
-    );
-    binding.insert(2, 1);
+    insert(binding, data.items, 2, [
+      {name: 'Six', subitems: [6, 12, 18]}
+    ]);
     expect(getText(fixture)).equal('One123Four4812Six61218Five51015Two246Three369');
   });
 
@@ -858,12 +842,10 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('One123Two246Three369');
     binding.context = getContext(data);
     // Remove inner item
-    data.items.splice(1, 1);
-    binding.remove(1, 1);
+    remove(binding, data.items, 1, 1);
     expect(getText(fixture)).equal('One123Three369');
     // Remove multiple remaining
-    data.items.splice(0, 2);
-    binding.remove(0, 2);
+    remove(binding, data.items, 0, 2);
     expect(getText(fixture)).equal('');
   });
 
@@ -885,12 +867,10 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('One123Two246Three369');
     binding.context = getContext(data);
     // Move one item
-    move(data.items, 1, 2, 1);
-    binding.move(1, 2, 1);
+    move(binding, data.items, 1, 2, 1);
     expect(getText(fixture)).equal('One123Three369Two246');
     // Move multiple items
-    move(data.items, 1, 0, 2);
-    binding.move(1, 0, 2);
+    move(binding, data.items, 1, 0, 2);
     expect(getText(fixture)).equal('Three369Two246One123');
   });
 
@@ -965,7 +945,16 @@ if (!document.createTextNode('x').textContent) {
   };
 }
 
-function move(array, from, to, howMany) {
+function insert(binding, array, index, items) {
+  array.splice.apply(array, [index, 0].concat(items));
+  binding.insert(index, items.length);
+}
+function remove(binding, array, index, howMany) {
+  array.splice(index, howMany);
+  binding.remove(index, howMany);
+}
+function move(binding, array, from, to, howMany) {
   var values = array.splice(from, howMany);
-  array.splice.apply(array, [to, 0].concat(values))
+  array.splice.apply(array, [to, 0].concat(values));
+  binding.move(from, to, howMany);
 }
