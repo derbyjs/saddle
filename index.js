@@ -812,12 +812,13 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
 };
 EachBlock.prototype.attachItemTo = function(parent, node, context, itemFor) {
   var start, end;
+  var oldPrevious = node.previousSibling;
   var nextNode = attachContent(parent, node, this.content, context);
   if (nextNode === node) {
     start = end = document.createComment('empty');
     parent.insertBefore(start, node || null);
   } else {
-    start = node;
+    start = (oldPrevious && oldPrevious.nextSibling) || parent.firstChild;
     end = (nextNode && nextNode.previousSibling) || parent.lastChild;
   }
   updateRange(context, null, this, start, end, itemFor);
@@ -848,12 +849,12 @@ EachBlock.prototype.remove = function(context, binding, index, howMany) {
   var i = 0;
   var parent = binding.start.parentNode;
   while (node) {
+    if (node.$bindItemStart && node.$bindItemStart.itemFor === binding.start) {
+      if (howMany === i++) return;
+    }
     var nextNode = node.nextSibling;
     parent.removeChild(node);
     emitRemoved(context, node, binding);
-    if (node.$bindEnd && node.$bindEnd.itemFor === binding.start) {
-      if (howMany === ++i) return;
-    }
     node = nextNode;
   }
 };
@@ -862,11 +863,11 @@ EachBlock.prototype.move = function(context, binding, from, to, howMany) {
   var fragment = document.createDocumentFragment();
   var i = 0;
   while (node) {
+    if (node.$bindItemStart && node.$bindItemStart.itemFor === binding.start) {
+      if (howMany === i++) break;
+    }
     var nextNode = node.nextSibling;
     fragment.appendChild(node);
-    if (node.$bindEnd && node.$bindEnd.itemFor === binding.start) {
-      if (howMany === ++i) break;
-    }
     node = nextNode;
   }
   node = indexStartNode(binding, to);
@@ -882,7 +883,7 @@ function indexStartNode(binding, index) {
   var i = 0;
   while (node = node.nextSibling) {
     if (node === binding.end) return node;
-    if (node.$bindStart && node.$bindStart.itemFor === binding.start) {
+    if (node.$bindItemStart && node.$bindItemStart.itemFor === binding.start) {
       if (index === i) return node;
       i++;
     }
@@ -894,10 +895,16 @@ function updateRange(context, binding, template, start, end, itemFor, condition)
     binding.start = start;
     binding.end = end;
     binding.condition = condition;
-    setNodeProperty(start, '$bindStart', binding);
-    setNodeProperty(end, '$bindEnd', binding);
+    setNodeBounds(binding, start, itemFor);
   } else {
     context.addBinding(new RangeBinding(template, context, start, end, itemFor, condition));
+  }
+}
+function setNodeBounds(binding, start, itemFor) {
+  if (itemFor) {
+    setNodeProperty(start, '$bindItemStart', binding);
+  } else {
+    setNodeProperty(start, '$bindStart', binding);
   }
 }
 
@@ -924,6 +931,12 @@ function replaceRange(context, start, end, fragment, binding, innerOnly) {
   // This shouldn't happen if bindings are cleaned up properly, but check
   // in case they aren't
   if (!parent) return;
+  // Copy item binding from old start to fragment being inserted
+  if (start.$bindItemStart && fragment.firstChild) {
+    setNodeProperty(fragment.firstChild, '$bindItemStart', start.$bindItemStart);
+    start.$bindItemStart.start = fragment.firstChild;
+  }
+  // Fast path for single node replacements
   if (start === end) {
     parent.replaceChild(fragment, start);
     emitRemoved(context, start, binding);
@@ -948,10 +961,9 @@ function replaceRange(context, start, end, fragment, binding, innerOnly) {
 }
 function emitRemoved(context, node, ignore) {
   context.removeNode(node);
-  var binding = node.$bindNode;
-  if (binding && binding !== ignore) context.removeBinding(binding);
-  binding = node.$bindStart;
-  if (binding && binding !== ignore) context.removeBinding(binding);
+  emitRemovedBinding(node.$bindNode);
+  emitRemovedBinding(node.$bindStart);
+  emitRemovedBinding(node.$bindItemStart);
   var attributes = node.$bindAttributes;
   if (attributes) {
     for (var key in attributes) {
@@ -960,6 +972,11 @@ function emitRemoved(context, node, ignore) {
   }
   for (node = node.firstChild; node; node = node.nextSibling) {
     emitRemoved(context, node, ignore);
+  }
+}
+function emitRemovedBinding(context, ignore, binding) {
+  if (binding && binding !== ignore) {
+    context.removeBinding(binding);
   }
 }
 
@@ -1021,8 +1038,7 @@ function RangeBinding(template, context, start, end, itemFor, condition) {
   this.itemFor = itemFor;
   this.condition = condition;
   this.meta = null;
-  setNodeProperty(start, '$bindStart', this);
-  setNodeProperty(end, '$bindEnd', this);
+  setNodeBounds(this, start, itemFor);
 }
 RangeBinding.prototype = new Binding();
 RangeBinding.prototype.type = 'RangeBinding';
@@ -1160,21 +1176,11 @@ function normalizeLineBreaks(string) {
       // and set the property on that node instead. Put the proxy after the
       // TextNode if marking the end of a range, and before otherwise.
       if (node.nodeType === 3) {
-        var proxyNode;
-        if (key === '$bindEnd') {
-          proxyNode = node.nextSibling;
-          if (!proxyNode || proxyNode.$bindProxy !== node) {
-            proxyNode = document.createComment('proxy');
-            proxyNode.$bindProxy = node;
-            node.parentNode.insertBefore(proxyNode, node.nextSibling || null);
-          }
-        } else {
-          proxyNode = node.previousSibling;
-          if (!proxyNode || proxyNode.$bindProxy !== node) {
-            proxyNode = document.createComment('proxy');
-            proxyNode.$bindProxy = node;
-            node.parentNode.insertBefore(proxyNode, node || null);
-          }
+        var proxyNode = node.previousSibling;
+        if (!proxyNode || proxyNode.$bindProxy !== node) {
+          proxyNode = document.createComment('proxy');
+          proxyNode.$bindProxy = node;
+          node.parentNode.insertBefore(proxyNode, node || null);
         }
         return proxyNode[key] = value;
       }
