@@ -378,12 +378,14 @@ DynamicHtml.prototype.attachTo = function(parent, node, context) {
   return node;
 };
 DynamicHtml.prototype.update = function(context, binding) {
+  var parent = binding.start.parentNode;
+  if (!parent) return;
   // Get start and end in advance, since binding is mutated in getFragment
   var start = binding.start;
   var end = binding.end;
   var value = getUnescapedValue(this.expression, context);
   var html = this.stringify(value);
-  var fragment = createHtmlFragment(binding.start.parentNode, html);
+  var fragment = createHtmlFragment(parent, html);
   var innerOnly = true;
   replaceRange(context, start, end, fragment, binding, innerOnly);
 };
@@ -836,18 +838,21 @@ EachBlock.prototype.update = function(context, binding) {
   replaceRange(context, start, end, fragment, binding);
 };
 EachBlock.prototype.insert = function(context, binding, index, howMany) {
+  var parent = binding.start.parentNode;
+  if (!parent) return;
   var node = indexStartNode(binding, index);
   var fragment = document.createDocumentFragment();
   for (var i = index, len = index + howMany; i < len; i++) {
     var itemContext = context.eachChild(this.expression, i);
     this.appendItemTo(fragment, itemContext, binding.start);
   }
-  binding.start.parentNode.insertBefore(fragment, node || null);
+  parent.insertBefore(fragment, node || null);
 };
 EachBlock.prototype.remove = function(context, binding, index, howMany) {
+  var parent = binding.start.parentNode;
+  if (!parent) return;
   var node = indexStartNode(binding, index);
   var i = 0;
-  var parent = binding.start.parentNode;
   while (node) {
     if (node.$bindItemStart && node.$bindItemStart.itemFor === binding.start) {
       if (howMany === i++) return;
@@ -859,6 +864,8 @@ EachBlock.prototype.remove = function(context, binding, index, howMany) {
   }
 };
 EachBlock.prototype.move = function(context, binding, from, to, howMany) {
+  var parent = binding.start.parentNode;
+  if (!parent) return;
   var node = indexStartNode(binding, from);
   var fragment = document.createDocumentFragment();
   var i = 0;
@@ -871,7 +878,7 @@ EachBlock.prototype.move = function(context, binding, from, to, howMany) {
     node = nextNode;
   }
   node = indexStartNode(binding, to);
-  binding.start.parentNode.insertBefore(fragment, node || null);
+  parent.insertBefore(fragment, node || null);
 };
 EachBlock.prototype.type = 'EachBlock';
 EachBlock.prototype.serialize = function() {
