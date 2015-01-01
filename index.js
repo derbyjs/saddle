@@ -659,6 +659,7 @@ Block.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression, this.content);
 };
 Block.prototype.update = function(context, binding) {
+  if (!binding.start.parentNode) return;
   var condition = this.getCondition(context);
   if (condition === binding.condition) return;
   binding.condition = condition;
@@ -728,6 +729,7 @@ ConditionalBlock.prototype.serialize = function() {
   return serializeObject.instance(this, this.expressions, this.contents);
 };
 ConditionalBlock.prototype.update = function(context, binding) {
+  if (!binding.start.parentNode) return;
   var condition = this.getCondition(context);
   if (condition === binding.condition) return;
   binding.condition = condition;
@@ -827,6 +829,7 @@ EachBlock.prototype.attachItemTo = function(parent, node, context, itemFor) {
   return nextNode;
 };
 EachBlock.prototype.update = function(context, binding) {
+  if (!binding.start.parentNode) return;
   var start = binding.start;
   var end = binding.end;
   if (binding.itemFor) {
@@ -934,10 +937,8 @@ function contentHtml(content, context, unescaped) {
   return html;
 }
 function replaceRange(context, start, end, fragment, binding, innerOnly) {
+  // Note: the calling function must make sure to check that there is a parent
   var parent = start.parentNode;
-  // This shouldn't happen if bindings are cleaned up properly, but check
-  // in case they aren't
-  if (!parent) return;
   // Copy item binding from old start to fragment being inserted
   if (start.$bindItemStart && fragment.firstChild) {
     setNodeProperty(fragment.firstChild, '$bindItemStart', start.$bindItemStart);
