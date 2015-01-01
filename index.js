@@ -857,6 +857,7 @@ EachBlock.prototype.remove = function(context, binding, index, howMany) {
   var node = indexStartNode(binding, index);
   var i = 0;
   while (node) {
+    if (node === binding.end) return;
     if (node.$bindItemStart && node.$bindItemStart.itemFor === binding.start) {
       if (howMany === i++) return;
     }
@@ -873,6 +874,7 @@ EachBlock.prototype.move = function(context, binding, from, to, howMany) {
   var fragment = document.createDocumentFragment();
   var i = 0;
   while (node) {
+    if (node === binding.end) break;
     if (node.$bindItemStart && node.$bindItemStart.itemFor === binding.start) {
       if (howMany === i++) break;
     }
