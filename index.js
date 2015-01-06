@@ -635,8 +635,14 @@ Block.prototype.get = function(context, unescaped) {
 };
 Block.prototype.appendTo = function(parent, context, binding) {
   var blockContext = context.child(this.expression);
-  var start = document.createComment(this.expression);
-  var end = document.createComment(this.ending);
+  var begining = this.expression;
+  var ending = this.ending;
+  if (this.expression && this.expression.get) {
+    begining = this.expression.get(context);
+    ending = '/' + begining;
+  }
+  var start = document.createComment(begining);
+  var end = document.createComment(ending);
   var condition = this.getCondition(context);
   parent.appendChild(start);
   appendContent(parent, this.content, blockContext);
@@ -645,8 +651,14 @@ Block.prototype.appendTo = function(parent, context, binding) {
 };
 Block.prototype.attachTo = function(parent, node, context) {
   var blockContext = context.child(this.expression);
-  var start = document.createComment(this.expression);
-  var end = document.createComment(this.ending);
+  var begining = this.expression;
+  var ending = this.ending;
+  if (this.expression && this.expression.get) {
+    begining = this.expression.get(context);
+    ending = '/' + begining;
+  }
+  var start = document.createComment(begining);
+  var end = document.createComment(ending);
   var condition = this.getCondition(context);
   parent.insertBefore(start, node || null);
   node = attachContent(parent, node, this.content, blockContext);
