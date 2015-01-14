@@ -816,7 +816,7 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
 };
 EachBlock.prototype.attachItemTo = function(parent, node, context, itemFor) {
   var start, end;
-  var oldPrevious = node.previousSibling;
+  var oldPrevious = node && node.previousSibling;
   var nextNode = attachContent(parent, node, this.content, context);
   if (nextNode === node) {
     start = end = document.createComment('empty');
