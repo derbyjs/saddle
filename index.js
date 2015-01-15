@@ -971,9 +971,9 @@ function replaceRange(context, start, end, fragment, binding, innerOnly) {
 }
 function emitRemoved(context, node, ignore) {
   context.removeNode(node);
-  emitRemovedBinding(node.$bindNode);
-  emitRemovedBinding(node.$bindStart);
-  emitRemovedBinding(node.$bindItemStart);
+  emitRemovedBinding(context, ignore, node.$bindNode);
+  emitRemovedBinding(context, ignore, node.$bindStart);
+  emitRemovedBinding(context, ignore, node.$bindItemStart);
   var attributes = node.$bindAttributes;
   if (attributes) {
     for (var key in attributes) {
