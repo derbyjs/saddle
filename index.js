@@ -828,7 +828,7 @@ EachBlock.prototype.attachTo = function(parent, node, context) {
 };
 EachBlock.prototype.attachItemTo = function(parent, node, context, itemFor) {
   var start, end;
-  var oldPrevious = node.previousSibling;
+  var oldPrevious = node && node.previousSibling;
   var nextNode = attachContent(parent, node, this.content, context);
   if (nextNode === node) {
     start = end = document.createComment('empty');
@@ -983,9 +983,9 @@ function replaceRange(context, start, end, fragment, binding, innerOnly) {
 }
 function emitRemoved(context, node, ignore) {
   context.removeNode(node);
-  emitRemovedBinding(node.$bindNode);
-  emitRemovedBinding(node.$bindStart);
-  emitRemovedBinding(node.$bindItemStart);
+  emitRemovedBinding(context, ignore, node.$bindNode);
+  emitRemovedBinding(context, ignore, node.$bindStart);
+  emitRemovedBinding(context, ignore, node.$bindItemStart);
   var attributes = node.$bindAttributes;
   if (attributes) {
     for (var key in attributes) {
