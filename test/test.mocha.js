@@ -1,3 +1,13 @@
+if ((typeof require) == 'function') {
+  expect = require('expect.js');
+  saddle = require('../index');
+  expressions = require('../example/expressions');
+}
+
+//add fixture to page
+//only 90s kids will remember this
+document.write('<div id="fixture"></div>');
+
 describe('Static rendering', function() {
 
   describe('HTML', function() {
@@ -389,7 +399,7 @@ describe('attachTo', function() {
       , new saddle.Html('<tr><td>Hi</td></tr>')
       , new saddle.Element('tr', null, [
           new saddle.Element('td', null, [
-            new Text('Ho')
+            new saddle.Text('Ho')
           ])
         ])
       ])
@@ -516,7 +526,7 @@ function testBindingUpdates(render) {
   it('updates raw HTML', function() {
     var template = new saddle.Template([
       new saddle.DynamicHtml(new expressions.Expression('html'))
-    , new Element('div')
+    , new saddle.Element('div')
     ]);
     var binding = render(template, {html: '<b>Hi</b>'}).pop();
     var children = getChildren(fixture);
