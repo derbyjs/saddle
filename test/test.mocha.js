@@ -1,7 +1,7 @@
-if ((typeof require) == 'function') {
-  expect = require('expect.js');
-  saddle = require('../index');
-  expressions = require('../example/expressions');
+if ((typeof require) === 'function') {
+  var expect = require('expect.js');
+  var saddle = require('../index');
+  var expressions = require('../example/expressions');
 }
 
 //add fixture to page
