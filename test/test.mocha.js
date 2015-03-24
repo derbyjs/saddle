@@ -733,6 +733,42 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('OneFourFiveTwoThree');
   });
 
+  it('inserts into empty each with else', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
+      ], [
+        new saddle.Text('else')
+      ])
+    ]);
+    var binding = render(template).pop();
+    expect(getText(fixture)).equal('else');
+    // Insert from null state
+    var data = {items: []};
+    binding.context = getContext(data);
+    insert(binding, data.items, 0, [{name: 'One'}, {name: 'Two'}, {name: 'Three'}]);
+    expect(getText(fixture)).equal('OneTwoThree');
+  });
+
+  it('removes all items in an each with else', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
+      ], [
+        new saddle.Text('else')
+      ])
+    ]);
+    var data = {items: [
+      {name: 'One'}, {name: 'Two'}, {name: 'Three'}
+    ]};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('OneTwoThree');
+    binding.context = getContext(data);
+    // Remove all items
+    remove(binding, data.items, 0, 3);
+    expect(getText(fixture)).equal('else');
+  });
+
   it('removes in an each', function() {
     var template = new saddle.Template([
       new saddle.EachBlock(new expressions.Expression('items'), [
@@ -912,12 +948,6 @@ function testBindingUpdates(render) {
     remove(eachBinding, data.items, 0, 1);
     expect(getText(fixture)).equal('B');
   });
-
-  // TODO: Should Saddle take care of these edge cases, or should the containing
-  // framework be smart enough to call binding.update() in these cases instead
-  // of binding.insert() / binding.remove()?
-  it('inserts into an empty list with an else');
-  it('removes all items from a list with an else');
 }
 
 function getContext(data, bindings) {
