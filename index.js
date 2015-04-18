@@ -855,6 +855,11 @@ EachBlock.prototype.update = function(context, binding) {
 EachBlock.prototype.insert = function(context, binding, index, howMany) {
   var parent = binding.start.parentNode;
   if (!parent) return;
+  // In case we are inserting all of the items, update instead. This is needed
+  // when we were previously rendering elseContent so that it is replaced
+  if (index === 0 && this.expression.get(context).length === howMany) {
+    return this.update(context, binding);
+  }
   var node = indexStartNode(binding, index);
   var fragment = document.createDocumentFragment();
   for (var i = index, len = index + howMany; i < len; i++) {
@@ -866,6 +871,11 @@ EachBlock.prototype.insert = function(context, binding, index, howMany) {
 EachBlock.prototype.remove = function(context, binding, index, howMany) {
   var parent = binding.start.parentNode;
   if (!parent) return;
+  // In case we are removing all of the items, update instead. This is needed
+  // when elseContent should be rendered
+  if (index === 0 && this.expression.get(context).length === 0) {
+    return this.update(context, binding);
+  }
   var node = indexStartNode(binding, index);
   var i = 0;
   while (node) {

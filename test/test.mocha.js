@@ -1,3 +1,13 @@
+if ((typeof require) === 'function') {
+  var expect = require('expect.js');
+  var saddle = require('../index');
+  var expressions = require('../example/expressions');
+}
+
+//add fixture to page
+//only 90s kids will remember this
+document.write('<div id="fixture"></div>');
+
 describe('Static rendering', function() {
 
   describe('HTML', function() {
@@ -389,7 +399,7 @@ describe('attachTo', function() {
       , new saddle.Html('<tr><td>Hi</td></tr>')
       , new saddle.Element('tr', null, [
           new saddle.Element('td', null, [
-            new Text('Ho')
+            new saddle.Text('Ho')
           ])
         ])
       ])
@@ -516,7 +526,7 @@ function testBindingUpdates(render) {
   it('updates raw HTML', function() {
     var template = new saddle.Template([
       new saddle.DynamicHtml(new expressions.Expression('html'))
-    , new Element('div')
+    , new saddle.Element('div')
     ]);
     var binding = render(template, {html: '<b>Hi</b>'}).pop();
     var children = getChildren(fixture);
@@ -723,6 +733,42 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('OneFourFiveTwoThree');
   });
 
+  it('inserts into empty each with else', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
+      ], [
+        new saddle.Text('else')
+      ])
+    ]);
+    var binding = render(template).pop();
+    expect(getText(fixture)).equal('else');
+    // Insert from null state
+    var data = {items: []};
+    binding.context = getContext(data);
+    insert(binding, data.items, 0, [{name: 'One'}, {name: 'Two'}, {name: 'Three'}]);
+    expect(getText(fixture)).equal('OneTwoThree');
+  });
+
+  it('removes all items in an each with else', function() {
+    var template = new saddle.Template([
+      new saddle.EachBlock(new expressions.Expression('items'), [
+        new saddle.DynamicText(new expressions.Expression('name'))
+      ], [
+        new saddle.Text('else')
+      ])
+    ]);
+    var data = {items: [
+      {name: 'One'}, {name: 'Two'}, {name: 'Three'}
+    ]};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('OneTwoThree');
+    binding.context = getContext(data);
+    // Remove all items
+    remove(binding, data.items, 0, 3);
+    expect(getText(fixture)).equal('else');
+  });
+
   it('removes in an each', function() {
     var template = new saddle.Template([
       new saddle.EachBlock(new expressions.Expression('items'), [
@@ -902,12 +948,6 @@ function testBindingUpdates(render) {
     remove(eachBinding, data.items, 0, 1);
     expect(getText(fixture)).equal('B');
   });
-
-  // TODO: Should Saddle take care of these edge cases, or should the containing
-  // framework be smart enough to call binding.update() in these cases instead
-  // of binding.insert() / binding.remove()?
-  it('inserts into an empty list with an else');
-  it('removes all items from a list with an else');
 }
 
 function getContext(data, bindings) {
