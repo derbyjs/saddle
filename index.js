@@ -107,10 +107,15 @@ Template.prototype.getFragment = function(context, binding) {
   return fragment;
 };
 Template.prototype.appendTo = function(parent, context) {
+  context.pause();
   appendContent(parent, this.content, context);
+  context.unpause();
 };
 Template.prototype.attachTo = function(parent, node, context) {
-  return attachContent(parent, node, this.content, context);
+  context.pause();
+  var node = attachContent(parent, node, this.content, context);
+  context.unpause();
+  return node;
 };
 Template.prototype.update = function() {};
 Template.prototype.stringify = function(value) {
@@ -261,8 +266,8 @@ Comment.prototype.get = function() {
 };
 Comment.prototype.appendTo = function(parent, context) {
   var node = document.createComment(this.data);
-  emitHooks(this.hooks, context, node);
   parent.appendChild(node);
+  emitHooks(this.hooks, context, node);
 };
 Comment.prototype.attachTo = function(parent, node, context) {
   return attachComment(parent, node, this.data, this, context);
@@ -321,10 +326,10 @@ function attachComment(parent, node, data, template, context) {
 }
 
 function addNodeBinding(template, context, node) {
-  emitHooks(template.hooks, context, node);
   if (template.expression) {
     context.addBinding(new NodeBinding(template, context, node));
   }
+  emitHooks(template.hooks, context, node);
 }
 
 function Html(data) {
@@ -527,7 +532,6 @@ Element.prototype.appendTo = function(parent, context) {
   var element = (this.ns) ?
     document.createElementNS(this.ns, tagName) :
     document.createElement(tagName);
-  emitHooks(this.hooks, context, element);
   for (var key in this.attributes) {
     var attribute = this.attributes[key];
     var value = attribute.getBound(context, element, key, this.ns);
@@ -546,6 +550,7 @@ Element.prototype.appendTo = function(parent, context) {
   }
   if (this.content) appendContent(element, this.content, context);
   parent.appendChild(element);
+  emitHooks(this.hooks, context, element);
 };
 Element.prototype.attachTo = function(parent, node, context) {
   var tagName = this.getTagName(context);
@@ -556,7 +561,6 @@ Element.prototype.attachTo = function(parent, node, context) {
   ) {
     throw attachError(parent, node);
   }
-  emitHooks(this.hooks, context, node);
   for (var key in this.attributes) {
     // Get each attribute to create bindings
     this.attributes[key].getBound(context, node, key, this.ns);
@@ -564,6 +568,7 @@ Element.prototype.attachTo = function(parent, node, context) {
     // are equivalent, but there are some tricky edge cases
   }
   if (this.content) attachContent(node, node.firstChild, this.content, context);
+  emitHooks(this.hooks, context, node);
   return node.nextSibling;
 };
 Element.prototype.type = 'Element';
@@ -618,9 +623,11 @@ function getAttributeValue(element, name) {
 
 function emitHooks(hooks, context, value) {
   if (!hooks) return;
-  for (var i = 0, len = hooks.length; i < len; i++) {
-    hooks[i].emit(context, value);
-  }
+  context.queue(function queuedHooks() {
+    for (var i = 0, len = hooks.length; i < len; i++) {
+      hooks[i].emit(context, value);
+    }
+  });
 }
 
 function Block(expression, content) {
@@ -1026,7 +1033,9 @@ function Binding() {
 }
 Binding.prototype.type = 'Binding';
 Binding.prototype.update = function() {
+  this.context.pause();
   this.template.update(this.context, this);
+  this.context.unpause();
 };
 Binding.prototype.insert = function() {
   this.update();
@@ -1075,25 +1084,31 @@ function RangeBinding(template, context, start, end, itemFor, condition) {
 RangeBinding.prototype = new Binding();
 RangeBinding.prototype.type = 'RangeBinding';
 RangeBinding.prototype.insert = function(index, howMany) {
+  this.context.pause();
   if (this.template.insert) {
     this.template.insert(this.context, this, index, howMany);
   } else {
     this.template.update(this.context, this);
   }
+  this.context.unpause();
 };
 RangeBinding.prototype.remove = function(index, howMany) {
+  this.context.pause();
   if (this.template.remove) {
     this.template.remove(this.context, this, index, howMany);
   } else {
     this.template.update(this.context, this);
   }
+  this.context.unpause();
 };
 RangeBinding.prototype.move = function(from, to, howMany) {
+  this.context.pause();
   if (this.template.move) {
     this.template.move(this.context, this, from, to, howMany);
   } else {
     this.template.update(this.context, this);
   }
+  this.context.unpause();
 };
 
 
