@@ -10,16 +10,18 @@ document.write('<div id="fixture"></div>');
 
 describe('Static rendering', function() {
 
+  var context = getContext();
+
   describe('HTML', function() {
     testStaticRendering(function test(options) {
-      var html = options.template.get();
+      var html = options.template.get(context);
       expect(html).equal(options.html);
     });
   });
 
   describe('Fragment', function() {
     testStaticRendering(function test(options) {
-      var fragment = options.template.getFragment();
+      var fragment = options.template.getFragment(context);
       options.fragment(fragment);
     });
   });
@@ -318,7 +320,8 @@ describe('attachTo', function() {
     removeChildren(fixture);
   });
 
-  function renderAndAttach(template, context) {
+  function renderAndAttach(template) {
+    var context = getContext();
     removeChildren(fixture);
     fixture.innerHTML = template.get(context);
     template.attachTo(fixture, fixture.firstChild, context);
@@ -951,12 +954,9 @@ function testBindingUpdates(render) {
 }
 
 function getContext(data, bindings) {
-  var contextMeta = {
-    addBinding: function(binding) {
-      bindings && bindings.push(binding);
-    }
-  , removeBinding: function() {}
-  , removeNode: function() {}
+  var contextMeta = new expressions.ContextMeta();
+  contextMeta.addBinding = function(binding) {
+    bindings && bindings.push(binding);
   };
   return new expressions.Context(contextMeta, data);
 }

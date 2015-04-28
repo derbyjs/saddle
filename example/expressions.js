@@ -21,7 +21,8 @@ if (typeof require === 'function') {
 module.exports = {
   Expression: Expression,
   ElseExpression: ElseExpression,
-  Context: Context
+  Context: Context,
+  ContextMeta: ContextMeta
 };
 
 function Expression(source) {
@@ -94,4 +95,32 @@ Context.prototype._get = function(property) {
   return (this.data && this.data.hasOwnProperty(property)) ?
     this.data[property] :
     this.parent && this.parent._get(property);
+};
+Context.prototype.pause = function() {
+  this.meta.pauseCount++;
+};
+Context.prototype.unpause = function() {
+  if (--this.meta.pauseCount) return;
+  this.flush();
+};
+Context.prototype.flush = function() {
+  var pending = this.meta.pending;
+  var len = pending.length;
+  if (!len) return;
+  this.meta.pending = [];
+  for (var i = 0; i < len; i++) {
+    pending[i]();
+  }
+};
+Context.prototype.queue = function(cb) {
+  this.meta.pending.push(cb);
+};
+
+function noop() {}
+function ContextMeta() {
+  this.addBinding = noop;
+  this.removeBinding = noop;
+  this.removeNode = noop;
+  this.pauseCount = 0;
+  this.pending = [];
 };
