@@ -88,6 +88,7 @@ exports.EachBlock = EachBlock;
 
 exports.Attribute = Attribute;
 exports.DynamicAttribute = DynamicAttribute;
+exports.AttributesExpression = AttributesExpression;
 
 // Binding Classes
 exports.Binding = Binding;
@@ -478,6 +479,68 @@ DynamicAttribute.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression, this.ns);
 };
 
+function AttributesExpression(expression) {
+  this.expression = expression;
+  this.elementNs = null;
+}
+AttributesExpression.prototype.get = function(context) {
+  return getUnescapedValue(this.expression, context);
+};
+AttributesExpression.prototype.getBound = function(context, element, key, elementNs) {
+  this.elementNs = elementNs;
+  var binding = new AttributeBinding(this, context, element, key);
+  context.addBinding(binding);
+  var value = getUnescapedValue(this.expression, context);
+  binding.oldValue = {};
+  for (var key in value) binding.oldValue[key] = value[key];
+  return value;
+};
+AttributesExpression.prototype.update = function(context, binding) {
+  var value = getUnescapedValue(this.expression, context) || {};
+  var element = binding.element;
+  
+  var oldValue = binding.oldValue;
+  if (oldValue) {
+    for (var key in oldValue) {
+      if (!(oldValue in value)) {
+        var propertyName = !this.elementNs && UPDATE_PROPERTIES[key];
+        if (propertyName) {
+          element[propertyName] = null;
+        }
+        else {
+          element.removeAttribute(key);
+        }
+      }
+    }
+  }
+  
+  for (var key in value) {
+    var attrValue = value[key];
+    var propertyName = !this.elementNs && UPDATE_PROPERTIES[key];
+    if (propertyName) {
+      if (propertyName === 'value' && (element.value === attrValue || element.valueAsNumber === attrValue)) return;
+      if (attrValue === void 0) attrValue = null;
+      element[propertyName] = attrValue;
+      return;
+    }
+    if (attrValue === false || attrValue == null) {
+      element.removeAttribute(key);
+      return;
+    }
+    if (attrValue === true) attrValue = key;
+    element.setAttribute(key, attrValue);
+  }
+  
+  oldValue = binding.oldValue = {};
+  for (var key in value) oldValue[key] = value[key];
+};
+AttributesExpression.prototype.type = 'AttributesExpression';
+AttributesExpression.prototype.module = 'templates';
+AttributesExpression.prototype.serialize = function() {
+  return serializeObject.instance(this, this.expression);
+};
+
+
 function getUnescapedValue(expression, context) {
   var unescaped = true;
   var value = expression.get(context, unescaped);
@@ -513,11 +576,22 @@ Element.prototype.get = function(context) {
   var endTag = this.getEndTag(tagName);
   var tagItems = [tagName];
   for (var key in this.attributes) {
-    var value = this.attributes[key].get(context);
-    if (value === true) {
-      tagItems.push(key);
-    } else if (value !== false && value != null) {
-      tagItems.push(key + '="' + escapeAttribute(value) + '"');
+    var attribute = this.attributes[key];
+    var value = attribute.get(context);
+    if (!(attribute instanceof AttributesExpression)) {
+      var singleValue = value;
+      value = {};
+      value[key] = singleValue;
+    }
+    if (value) {
+      for (var attrKey in value) {
+        var attrValue = value[attrKey];
+        if (attrValue === true) {
+          tagItems.push(attrKey);
+        } else if (attrValue !== false && attrValue != null) {
+          tagItems.push(attrKey + '="' + escapeAttribute(attrValue) + '"');
+        }
+      }
     }
   }
   var startTag = '<' + tagItems.join(' ') + this.startClose;
@@ -535,17 +609,27 @@ Element.prototype.appendTo = function(parent, context) {
   for (var key in this.attributes) {
     var attribute = this.attributes[key];
     var value = attribute.getBound(context, element, key, this.ns);
-    if (value === false || value == null) continue;
-    var propertyName = !this.ns && CREATE_PROPERTIES[key];
-    if (propertyName) {
-      element[propertyName] = value;
-      continue;
+    if (!(attribute instanceof AttributesExpression)) {
+      var singleValue = value;
+      value = {};
+      value[key] = singleValue;
     }
-    if (value === true) value = key;
-    if (attribute.ns) {
-      element.setAttributeNS(attribute.ns, key, value);
-    } else {
-      element.setAttribute(key, value);
+    if (value) {
+      for (var attrKey in value) {
+        var attrValue = value[attrKey];
+        if (attrValue === false || attrValue == null) continue;
+        var propertyName = !this.ns && CREATE_PROPERTIES[attrKey];
+        if (propertyName) {
+          element[propertyName] = attrValue;
+          continue;
+        }
+        if (attrValue === true) attrValue = attrKey;
+        if (attribute.ns) {
+          element.setAttributeNS(attribute.ns, attrKey, attrValue);
+        } else {
+          element.setAttribute(attrKey, attrValue);
+        }
+      }
     }
   }
   if (this.content) appendContent(element, this.content, context);
