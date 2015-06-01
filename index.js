@@ -502,7 +502,7 @@ AttributesExpression.prototype.update = function(context, binding) {
   var oldValue = binding.oldValue;
   if (oldValue) {
     for (var key in oldValue) {
-      if (!(oldValue in value)) {
+      if (!(key in value)) {
         var propertyName = !this.elementNs && UPDATE_PROPERTIES[key];
         if (propertyName) {
           element[propertyName] = null;
@@ -521,11 +521,11 @@ AttributesExpression.prototype.update = function(context, binding) {
       if (propertyName === 'value' && (element.value === attrValue || element.valueAsNumber === attrValue)) return;
       if (attrValue === void 0) attrValue = null;
       element[propertyName] = attrValue;
-      return;
+      continue;
     }
     if (attrValue === false || attrValue == null) {
       element.removeAttribute(key);
-      return;
+      continue;
     }
     if (attrValue === true) attrValue = key;
     element.setAttribute(key, attrValue);
