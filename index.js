@@ -481,22 +481,42 @@ DynamicAttribute.prototype.serialize = function() {
 
 function AttributesExpression(expression) {
   this.expression = expression;
+  expression.supportObject = true;
   this.elementNs = null;
 }
 AttributesExpression.prototype.get = function(context) {
-  return getUnescapedValue(this.expression, context);
+  var value;
+  if (this.expression.type === 'SequenceExpression') {
+    value = {};
+    for (var i = 0, exression; exression = this.expression.args[i++];) {
+      var curValue = getUnescapedValue(exression, context);
+      if (curValue) {
+        for (var key in curValue) {
+          value[key] = curValue[key];
+        }
+      }
+    }
+    return value;
+  }
+  value = getUnescapedValue(this.expression, context) || {};
+  if (typeof value !== 'object') {
+    var plainValue = value;
+    value = {};
+    value.attributes = plainValue;
+  }
+  return value;
 };
 AttributesExpression.prototype.getBound = function(context, element, key, elementNs) {
   this.elementNs = elementNs;
   var binding = new AttributeBinding(this, context, element, key);
   context.addBinding(binding);
-  var value = getUnescapedValue(this.expression, context);
+  var value = this.get(context);
   binding.oldValue = {};
   for (var key in value) binding.oldValue[key] = value[key];
   return value;
 };
 AttributesExpression.prototype.update = function(context, binding) {
-  var value = getUnescapedValue(this.expression, context) || {};
+  var value = this.get(context);
   var element = binding.element;
   
   var oldValue = binding.oldValue;
@@ -537,8 +557,7 @@ AttributesExpression.prototype.type = 'AttributesExpression';
 AttributesExpression.prototype.module = 'templates';
 AttributesExpression.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression);
-};
-
+}; 
 
 function getUnescapedValue(expression, context) {
   var unescaped = true;
@@ -582,15 +601,13 @@ Element.prototype.get = function(context) {
       value = {};
       value[key] = singleValue;
     }
-    if (value) {
-      for (var attrKey in value) {
-        if (attrKey) {
-          var attrValue = value[attrKey];
-          if (attrValue === true) {
-            tagItems.push(attrKey);
-          } else if (attrValue !== false && attrValue != null) {
-            tagItems.push(attrKey + '="' + escapeAttribute(attrValue) + '"');
-          }
+    for (var attrKey in value) {
+      if (attrKey) {
+        var attrValue = value[attrKey];
+        if (attrValue === true) {
+          tagItems.push(attrKey);
+        } else if (attrValue !== false && attrValue != null) {
+          tagItems.push(attrKey + '="' + escapeAttribute(attrValue) + '"');
         }
       }
     }
@@ -615,22 +632,20 @@ Element.prototype.appendTo = function(parent, context) {
       value = {};
       value[key] = singleValue;
     }
-    if (value) {
-      for (var attrKey in value) {
-        if (!attrKey) continue;
-        var attrValue = value[attrKey];
-        if (attrValue === false || attrValue == null) continue;
-        var propertyName = !this.ns && CREATE_PROPERTIES[attrKey];
-        if (propertyName) {
-          element[propertyName] = attrValue;
-          continue;
-        }
-        if (attrValue === true) attrValue = attrKey;
-        if (attribute.ns) {
-          element.setAttributeNS(attribute.ns, attrKey, attrValue);
-        } else {
-          element.setAttribute(attrKey, attrValue);
-        }
+    for (var attrKey in value) {
+      if (!attrKey) continue;
+      var attrValue = value[attrKey];
+      if (attrValue === false || attrValue == null) continue;
+      var propertyName = !this.ns && CREATE_PROPERTIES[attrKey];
+      if (propertyName) {
+        element[propertyName] = attrValue;
+        continue;
+      }
+      if (attrValue === true) attrValue = attrKey;
+      if (attribute.ns) {
+        element.setAttributeNS(attribute.ns, attrKey, attrValue);
+      } else {
+        element.setAttribute(attrKey, attrValue);
       }
     }
   }
@@ -728,8 +743,14 @@ Block.prototype.get = function(context, unescaped) {
 };
 Block.prototype.appendTo = function(parent, context, binding) {
   var blockContext = context.child(this.expression);
-  var start = document.createComment(this.expression);
-  var end = document.createComment(this.ending);
+  var begining = this.expression;
+  var ending = this.ending;
+  if (this.expression && this.expression.get) {
+    begining = this.expression.get(context);
+    ending = '/' + begining;
+  }
+  var start = document.createComment(begining);
+  var end = document.createComment(ending);
   var condition = this.getCondition(context);
   parent.appendChild(start);
   appendContent(parent, this.content, blockContext);
@@ -738,8 +759,14 @@ Block.prototype.appendTo = function(parent, context, binding) {
 };
 Block.prototype.attachTo = function(parent, node, context) {
   var blockContext = context.child(this.expression);
-  var start = document.createComment(this.expression);
-  var end = document.createComment(this.ending);
+  var begining = this.expression;
+  var ending = this.ending;
+  if (this.expression && this.expression.get) {
+    begining = this.expression.get(context);
+    ending = '/' + begining;
+  }
+  var start = document.createComment(begining);
+  var end = document.createComment(ending);
   var condition = this.getCondition(context);
   parent.insertBefore(start, node || null);
   node = attachContent(parent, node, this.content, blockContext);
