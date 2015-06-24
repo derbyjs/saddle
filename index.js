@@ -488,8 +488,8 @@ AttributesExpression.prototype.get = function(context) {
   var value;
   if (this.expression.type === 'SequenceExpression') {
     value = {};
-    for (var i = 0, exression; exression = this.expression.args[i++];) {
-      var curValue = getUnescapedValue(exression, context);
+    for (var i = 0, expression; expression = this.expression.args[i++];) {
+      var curValue = getUnescapedValue(expression, context);
       if (curValue) {
         for (var key in curValue) {
           value[key] = curValue[key];
