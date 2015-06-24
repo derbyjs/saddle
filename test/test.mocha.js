@@ -311,6 +311,68 @@ function testDynamicRendering(test) {
     });
   });
 
+  it('renders attributes by expression', function() {
+    test({
+      template: new saddle.Element('div', {
+        attributes: new saddle.AttributesExpression({
+          'get': function() { return {id: 'testid', style: 'color: red;', bool: true, 'bool-false': false}; }
+        })
+      })
+      , html: '<div id="testid" style="color: red;" bool></div>'
+      , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+        expect(fragment.childNodes[0].getAttribute('id')).eql('testid');
+        expect(fragment.childNodes[0].style.color).eql('red');
+        expect(fragment.childNodes[0].getAttribute('bool')).eql('bool');
+        expect(fragment.childNodes[0].getAttribute('bool-false')).eql(null);
+      }
+    });
+  });
+
+  it('renders attributes by sequence expression', function() {
+    test({
+      template: new saddle.Element('div', {
+        attributes: new saddle.AttributesExpression({
+          type: 'SequenceExpression',
+          args: [
+            {
+              'get': function() { return {id: 'testid', style: 'color: red;'}; }
+            },
+            {
+              'get': function() { return null; }
+            },
+            {
+              'get': function() { return {style: null, bool: true}; }
+            }
+          ]
+        })
+      })
+    , html: '<div id="testid" bool></div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+        expect(fragment.childNodes[0].getAttribute('id')).eql('testid');
+        expect(fragment.childNodes[0].getAttribute('style')).eql(null);
+        expect(fragment.childNodes[0].getAttribute('bool')).eql('bool');
+      }
+    });
+  });
+
+  it('renders attributes by string expression', function() {
+    test({
+      template: new saddle.Element('div', {
+        attributes: new saddle.AttributesExpression(new saddle.Template([new saddle.Text('just string')]))
+      })
+    , html: '<div attributes="just string"></div>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes.length).equal(1);
+        expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+        expect(fragment.childNodes[0].getAttribute('attributes')).eql('just string');
+      }
+    });
+  });
+
 }
 
 describe('attachTo', function() {
@@ -390,6 +452,9 @@ describe('attachTo', function() {
         type: new saddle.Attribute('text')
       , autofocus: new saddle.Attribute(true)
       , placeholder: new saddle.Attribute(null)
+      , attributes: new saddle.AttributesExpression({
+          'get': function() { return {name: 'test', style: 'color: red;'}; }
+        })
       })
     ]);
     renderAndAttach(template);
@@ -556,10 +621,12 @@ function testBindingUpdates(render) {
     var template = new saddle.Template([
       new saddle.Element('div', {
         'class': new saddle.Attribute('message')
+      , 'attributes': new saddle.AttributesExpression(new expressions.Expression('attrs'))
       , 'data-greeting': new saddle.DynamicAttribute(new expressions.Expression('greeting'))
       })
     ]);
-    var binding = render(template).pop();
+    var bindings = render(template);
+    var binding = bindings.pop();
     var node = fixture.firstChild;
     expect(node.className).equal('message');
     expect(node.getAttribute('data-greeting')).eql(null);
@@ -577,6 +644,24 @@ function testBindingUpdates(render) {
     expect(node.getAttribute('data-greeting')).eql(null);
     // Dynamic updates don't affect static attribute
     expect(node.className).equal('message');
+
+    // Attributes expression
+    binding = bindings.pop();
+    // Set initial value
+    binding.context = getContext({attrs: {id: 'test', bool: true}});
+    binding.update();
+    expect(node.getAttribute('id')).equal('test');
+    expect(node.getAttribute('bool')).equal('bool');
+    // Change value, and clear another one
+    binding.context = getContext({attrs: {id: 'another'}});
+    binding.update();
+    expect(node.getAttribute('id')).equal('another');
+    expect(node.getAttribute('bool')).equal(null);
+    // String value
+    binding.context = getContext({attrs: 'just string'});
+    binding.update();
+    expect(node.getAttribute('id')).equal(null);
+    expect(node.getAttribute('attributes')).eql('just string');
   });
 
   it('updates a Block', function() {
