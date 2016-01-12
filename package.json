@@ -1,10 +1,10 @@
 {
   "name": "saddle",
   "description": "A bindings engine for rendering HTML or creating DOM nodes directly",
-  "homepage": "https://github.com/codeparty/saddle",
+  "homepage": "https://github.com/derbyjs/saddle",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeparty/saddle"
+    "url": "git+https://github.com/derbyjs/saddle.git"
   },
   "version": "0.6.1",
   "main": "./lib/index.js",
@@ -32,5 +32,14 @@
       "ipad/6..latest",
       "android-browser/latest"
     ]
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/derbyjs/saddle/issues"
+  },
+  "directories": {
+    "example": "example",
+    "test": "test"
+  },
+  "author": "Nate Smith",
+  "license": "MIT"
 }
