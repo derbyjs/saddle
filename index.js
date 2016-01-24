@@ -188,6 +188,7 @@ Text.prototype.serialize = function() {
 
 function DynamicText(expression) {
   this.expression = expression;
+  this.unbound = false;
 }
 DynamicText.prototype = new Template();
 DynamicText.prototype.get = function(context, unescaped) {
@@ -330,7 +331,7 @@ function attachComment(parent, node, data, template, context) {
 }
 
 function addNodeBinding(template, context, node) {
-  if (template.expression) {
+  if (template.expression && !template.unbound) {
     context.addBinding(new NodeBinding(template, context, node));
   }
   emitHooks(template.hooks, context, node);
@@ -504,6 +505,7 @@ function Element(tagName, attributes, content, hooks, selfClosing, notClosed, ns
   this.startClose = getStartClose(selfClosing);
   var lowerTagName = tagName && tagName.toLowerCase();
   this.unescapedContent = (lowerTagName === 'script' || lowerTagName === 'style');
+  this.bindContentToValue = (lowerTagName === 'textarea');
 }
 Element.prototype = new Template();
 Element.prototype.getTagName = function() {
@@ -552,7 +554,10 @@ Element.prototype.appendTo = function(parent, context) {
       element.setAttribute(key, value);
     }
   }
-  if (this.content) appendContent(element, this.content, context);
+  if (this.content) {
+    this._bindContent(context, element);
+    appendContent(element, this.content, context);
+  }
   parent.appendChild(element);
   emitHooks(this.hooks, context, element);
 };
@@ -571,9 +576,23 @@ Element.prototype.attachTo = function(parent, node, context) {
     // TODO: Ideally, this would also check that the node's current attributes
     // are equivalent, but there are some tricky edge cases
   }
-  if (this.content) attachContent(node, node.firstChild, this.content, context);
+  if (this.content) {
+    this._bindContent(context, node);
+    attachContent(node, node.firstChild, this.content, context);
+  }
   emitHooks(this.hooks, context, node);
   return node.nextSibling;
+};
+Element.prototype._bindContent = function(context, element) {
+  // For textareas with dynamic text content, bind to the value property
+  var child = this.bindContentToValue &&
+    this.content.length === 1 &&
+    this.content[0];
+  if (child instanceof DynamicText) {
+    child.unbound = true;
+    var template = new DynamicAttribute(child.expression);
+    context.addBinding(new AttributeBinding(template, context, element, 'value'));
+  }
 };
 Element.prototype.type = 'Element';
 Element.prototype.serialize = function() {
