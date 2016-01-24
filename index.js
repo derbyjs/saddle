@@ -429,10 +429,10 @@ function Attribute(data, ns) {
   this.data = data;
   this.ns = ns;
 }
+Attribute.prototype = new Template();
 Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
-Attribute.prototype.module = Template.prototype.module;
 Attribute.prototype.type = 'Attribute';
 Attribute.prototype.serialize = function() {
   return serializeObject.instance(this, this.data, this.ns);
@@ -458,8 +458,8 @@ DynamicAttribute.prototype.update = function(context, binding) {
   var element = binding.element;
   var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
-    if (value === void 0) value = null;
-    if (propertyName === 'value' && (element.value === value || element.valueAsNumber === value)) return;
+    if (propertyName === 'value') value = this.stringify(value);
+    if (element[propertyName] === value) return;
     element[propertyName] = value;
     return;
   }
