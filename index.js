@@ -458,8 +458,8 @@ DynamicAttribute.prototype.update = function(context, binding) {
   var element = binding.element;
   var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
-    if (propertyName === 'value' && (element.value === value || element.valueAsNumber === value)) return;
     if (value === void 0) value = null;
+    if (propertyName === 'value' && (element.value === value || element.valueAsNumber === value)) return;
     element[propertyName] = value;
     return;
   }
