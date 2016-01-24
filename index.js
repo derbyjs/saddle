@@ -3,7 +3,7 @@ if (typeof require === 'function') {
 }
 
 // UPDATE_PROPERTIES map HTML attribute names to an Element DOM property that
-// should be used for setting on bindings updates instead of s'test'Attribute.
+// should be used for setting on bindings updates instead of setAttribute.
 //
 // https://github.com/jquery/jquery/blob/1.x-master/src/attributes/prop.js
 // https://github.com/jquery/jquery/blob/master/src/attributes/prop.js
