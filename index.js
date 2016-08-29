@@ -967,6 +967,9 @@ function appendContent(parent, content, context) {
 }
 function attachContent(parent, node, content, context) {
   for (var i = 0, len = content.length; i < len; i++) {
+    while (node && node.hasAttribute && node.hasAttribute('data-no-attach')) {
+      node = node.nextSibling;
+    }
     node = content[i].attachTo(parent, node, context);
   }
   return node;
