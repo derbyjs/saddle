@@ -137,7 +137,8 @@ function Doctype(name, publicId, systemId) {
   this.publicId = publicId;
   this.systemId = systemId;
 }
-Doctype.prototype = new Template();
+Doctype.prototype = Object.create(Template.prototype);
+Doctype.prototype.constructor = Doctype;
 Doctype.prototype.get = function() {
   var publicText = (this.publicId) ?
     ' PUBLIC "' + this.publicId  + '"' :
@@ -170,7 +171,8 @@ function Text(data) {
   this.data = data;
   this.escaped = escapeHtml(data);
 }
-Text.prototype = new Template();
+Text.prototype = Object.create(Template.prototype);
+Text.prototype.constructor = Text;
 Text.prototype.get = function(context, unescaped) {
   return (unescaped) ? this.data : this.escaped;
 };
@@ -190,7 +192,8 @@ function DynamicText(expression) {
   this.expression = expression;
   this.unbound = false;
 }
-DynamicText.prototype = new Template();
+DynamicText.prototype = Object.create(Template.prototype);
+DynamicText.prototype.constructor = DynamicText;
 DynamicText.prototype.get = function(context, unescaped) {
   var value = this.expression.get(context);
   if (value instanceof Template) {
@@ -265,7 +268,8 @@ function Comment(data, hooks) {
   this.data = data;
   this.hooks = hooks;
 }
-Comment.prototype = new Template();
+Comment.prototype = Object.create(Template.prototype);
+Comment.prototype.constructor = Comment;
 Comment.prototype.get = function() {
   return '<!--' + this.data + '-->';
 };
@@ -286,7 +290,8 @@ function DynamicComment(expression, hooks) {
   this.expression = expression;
   this.hooks = hooks;
 }
-DynamicComment.prototype = new Template();
+DynamicComment.prototype = Object.create(Template.prototype);
+DynamicComment.prototype.constructor = DynamicComment;
 DynamicComment.prototype.get = function(context) {
   var value = getUnescapedValue(this.expression, context);
   var data = this.stringify(value);
@@ -340,7 +345,8 @@ function addNodeBinding(template, context, node) {
 function Html(data) {
   this.data = data;
 }
-Html.prototype = new Template();
+Html.prototype = Object.create(Template.prototype);
+Html.prototype.constructor = Html;
 Html.prototype.get = function() {
   return this.data;
 };
@@ -360,7 +366,8 @@ function DynamicHtml(expression) {
   this.expression = expression;
   this.ending = '/' + expression;
 }
-DynamicHtml.prototype = new Template();
+DynamicHtml.prototype = Object.create(Template.prototype);
+DynamicHtml.prototype.constructor = DynamicHtml;
 DynamicHtml.prototype.get = function(context) {
   var value = getUnescapedValue(this.expression, context);
   return this.stringify(value);
@@ -429,7 +436,8 @@ function Attribute(data, ns) {
   this.data = data;
   this.ns = ns;
 }
-Attribute.prototype = new Template();
+Attribute.prototype = Object.create(Template.prototype);
+Attribute.prototype.constructor = Attribute;
 Attribute.prototype.get = Attribute.prototype.getBound = function(context) {
   return this.data;
 };
@@ -444,7 +452,8 @@ function DynamicAttribute(expression, ns) {
   this.ns = ns;
   this.elementNs = null;
 }
-DynamicAttribute.prototype = new Attribute();
+DynamicAttribute.prototype = Object.create(Attribute.prototype);
+DynamicAttribute.prototype.constructor = DynamicAttribute;
 DynamicAttribute.prototype.get = function(context) {
   return getUnescapedValue(this.expression, context);
 };
@@ -507,7 +516,8 @@ function Element(tagName, attributes, content, hooks, selfClosing, notClosed, ns
   this.unescapedContent = (lowerTagName === 'script' || lowerTagName === 'style');
   this.bindContentToValue = (lowerTagName === 'textarea');
 }
-Element.prototype = new Template();
+Element.prototype = Object.create(Template.prototype);
+Element.prototype.constructor = Element;
 Element.prototype.getTagName = function() {
   return this.tagName;
 };
@@ -620,7 +630,8 @@ function DynamicElement(tagName, attributes, content, hooks, selfClosing, notClo
   this.startClose = getStartClose(selfClosing);
   this.unescapedContent = false;
 }
-DynamicElement.prototype = new Element();
+DynamicElement.prototype = Object.create(Element.prototype);
+DynamicElement.prototype.constructor = DynamicElement;
 DynamicElement.prototype.getTagName = function(context) {
   return getUnescapedValue(this.tagName, context);
 };
@@ -658,7 +669,8 @@ function Block(expression, content) {
   this.ending = '/' + expression;
   this.content = content;
 }
-Block.prototype = new Template();
+Block.prototype = Object.create(Template.prototype);
+Block.prototype.constructor = Block;
 Block.prototype.get = function(context, unescaped) {
   var blockContext = context.child(this.expression);
   return contentHtml(this.content, blockContext, unescaped);
@@ -719,7 +731,8 @@ function ConditionalBlock(expressions, contents) {
   this.ending = '/' + this.beginning;
   this.contents = contents;
 }
-ConditionalBlock.prototype = new Block();
+ConditionalBlock.prototype = Object.create(Block.prototype);
+ConditionalBlock.prototype.constructor = ConditionalBlock;
 ConditionalBlock.prototype.get = function(context, unescaped) {
   var condition = this.getCondition(context);
   if (condition == null) return '';
@@ -783,7 +796,8 @@ function EachBlock(expression, content, elseContent) {
   this.content = content;
   this.elseContent = elseContent;
 }
-EachBlock.prototype = new Block();
+EachBlock.prototype = Object.create(Block.prototype);
+EachBlock.prototype.constructor = EachBlock;
 EachBlock.prototype.get = function(context, unescaped) {
   var items = this.expression.get(context);
   if (items && items.length) {
@@ -1068,7 +1082,8 @@ function NodeBinding(template, context, node) {
   this.meta = null;
   setNodeProperty(node, '$bindNode', this);
 }
-NodeBinding.prototype = new Binding();
+NodeBinding.prototype = Object.create(Binding.prototype);
+NodeBinding.prototype.constructor = NodeBinding;
 NodeBinding.prototype.type = 'NodeBinding';
 
 function AttributeBindingsMap() {}
@@ -1082,7 +1097,8 @@ function AttributeBinding(template, context, element, name) {
     (element.$bindAttributes = new AttributeBindingsMap());
   map[name] = this;
 }
-AttributeBinding.prototype = new Binding();
+AttributeBinding.prototype = Object.create(Binding.prototype);
+AttributeBinding.prototype.constructor = AttributeBinding;
 AttributeBinding.prototype.type = 'AttributeBinding';
 
 function RangeBinding(template, context, start, end, itemFor, condition) {
@@ -1095,7 +1111,8 @@ function RangeBinding(template, context, start, end, itemFor, condition) {
   this.meta = null;
   setNodeBounds(this, start, itemFor);
 }
-RangeBinding.prototype = new Binding();
+RangeBinding.prototype = Object.create(Binding.prototype);
+RangeBinding.prototype.constructor = RangeBinding;
 RangeBinding.prototype.type = 'RangeBinding';
 RangeBinding.prototype.insert = function(index, howMany) {
   this.context.pause();
