@@ -188,6 +188,13 @@ Text.prototype.serialize = function() {
   return serializeObject.instance(this, this.data);
 };
 
+// DynamicText might be more accurately named DynamicContent. When its
+// expression returns a template, it acts similar to a Block, and it renders
+// the template surrounded by comment markers for range replacement. When its
+// expression returns any other type, it renders a DOM Text node with no
+// markers. Text nodes are bound by updating their data property dynamically.
+// The update method must take care to switch between these types of bindings
+// in case the expression return type changes dynamically.
 function DynamicText(expression) {
   this.expression = expression;
   this.unbound = false;
@@ -205,10 +212,16 @@ DynamicText.prototype.get = function(context, unescaped) {
   var data = this.stringify(value);
   return (unescaped) ? data : escapeHtml(data);
 };
-DynamicText.prototype.appendTo = function(parent, context) {
+DynamicText.prototype.appendTo = function(parent, context, binding) {
   var value = this.expression.get(context);
   if (value instanceof Template) {
+    var start = document.createComment(this.expression);
+    var end = document.createComment('/' + this.expression);
+    var condition = this.getCondition(context);
+    parent.appendChild(start);
     value.appendTo(parent, context);
+    parent.appendChild(end);
+    updateRange(context, binding, this, start, end, null, condition);
     return;
   }
   var data = this.stringify(value);
@@ -219,13 +232,32 @@ DynamicText.prototype.appendTo = function(parent, context) {
 DynamicText.prototype.attachTo = function(parent, node, context) {
   var value = this.expression.get(context);
   if (value instanceof Template) {
-    return value.attachTo(parent, node, context);
+    var start = document.createComment(this.expression);
+    var end = document.createComment('/' + this.expression);
+    var condition = this.getCondition(context);
+    parent.insertBefore(start, node || null);
+    node = value.attachTo(parent, node, context);
+    parent.insertBefore(end, node || null);
+    updateRange(context, null, this, start, end, null, condition);
+    return node;
   }
   var data = this.stringify(value);
   return attachText(parent, node, data, this, context);
 };
 DynamicText.prototype.update = function(context, binding) {
-  binding.node.data = this.stringify(this.expression.get(context));
+  if (binding instanceof RangeBinding) {
+    this._blockUpdate(context, binding);
+    return;
+  }
+  var value = this.expression.get(context);
+  if (value instanceof Template) {
+    var start = binding.node;
+    var end = start;
+    var fragment = this.getFragment(context);
+    replaceRange(context, start, end, fragment, binding);
+    return;
+  }
+  binding.node.data = this.stringify(value);
 };
 DynamicText.prototype.type = 'DynamicText';
 DynamicText.prototype.serialize = function() {
@@ -724,6 +756,8 @@ Block.prototype.getCondition = function(context) {
   var value = this.expression.get(context);
   return (typeof value === 'object') ? NaN : value;
 };
+DynamicText.prototype._blockUpdate = Block.prototype.update;
+DynamicText.prototype.getCondition = Block.prototype.getCondition;
 
 function ConditionalBlock(expressions, contents) {
   this.expressions = expressions;
