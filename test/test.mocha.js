@@ -515,6 +515,74 @@ function testBindingUpdates(render) {
     expect(getText(fixture)).equal('onetwo');
   });
 
+  it('updates a TextNode that returns text, then a Template', function() {
+    var template = new saddle.Template([
+      new saddle.DynamicText(new expressions.Expression('dynamicTemplate'))
+    ]);
+    var data = {dynamicTemplate: 'Hola'};
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('Hola');
+    binding.context = getContext({
+      dynamicTemplate: new saddle.DynamicText(new expressions.Expression('text'))
+    , text: 'Yo'
+    });
+    binding.update();
+    expect(getText(fixture)).equal('Yo');
+  });
+
+  it('updates a TextNode that returns a Template, then text', function() {
+    var template = new saddle.Template([
+      new saddle.DynamicText(new expressions.Expression('dynamicTemplate'))
+    ]);
+    var data = {
+      dynamicTemplate: new saddle.DynamicText(new expressions.Expression('text'))
+    , text: 'Yo'
+    };
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('Yo');
+    binding.context = getContext({dynamicTemplate: 'Hola'});
+    binding.update();
+    expect(getText(fixture)).equal('Hola');
+  });
+
+  it('updates a TextNode that returns a Template, then another Template', function() {
+    var template = new saddle.Template([
+      new saddle.DynamicText(new expressions.Expression('dynamicTemplate'))
+    ]);
+    var data = {
+      dynamicTemplate: new saddle.DynamicText(new expressions.Expression('text'))
+    , text: 'Yo'
+    };
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('Yo');
+    binding.context = getContext({
+      dynamicTemplate: new saddle.Template([
+        new saddle.DynamicText(new expressions.Expression('first'))
+      , new saddle.DynamicText(new expressions.Expression('second'))
+      ])
+    , first: 'one'
+    , second: 'two'
+    });
+    binding.update();
+    expect(getText(fixture)).equal('onetwo');
+  });
+
+  it('updates within a template returned by a TextNode', function() {
+    var template = new saddle.Template([
+      new saddle.DynamicText(new expressions.Expression('dynamicTemplate'))
+    ]);
+    var data = {
+      dynamicTemplate: new saddle.DynamicText(new expressions.Expression('text'))
+    , text: 'Yo'
+    };
+    var binding = render(template, data).pop();
+    expect(getText(fixture)).equal('Yo');
+    data.text = 'Hola';
+    binding.context = getContext(data);
+    binding.update();
+    expect(getText(fixture)).equal('Hola');
+  });
+
   it('updates a CommentNode', function() {
     var template = new saddle.Template([
       new saddle.DynamicComment(new expressions.Expression('comment'))
