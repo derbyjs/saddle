@@ -259,6 +259,9 @@ DynamicText.prototype.update = function(context, binding) {
   }
   binding.node.data = this.stringify(value);
 };
+DynamicText.prototype.getCondition = function(context) {
+  return this.expression.get(context);
+};
 DynamicText.prototype.type = 'DynamicText';
 DynamicText.prototype.serialize = function() {
   return serializeObject.instance(this, this.expression);
@@ -757,7 +760,6 @@ Block.prototype.getCondition = function(context) {
   return (typeof value === 'object') ? NaN : value;
 };
 DynamicText.prototype._blockUpdate = Block.prototype.update;
-DynamicText.prototype.getCondition = Block.prototype.getCondition;
 
 function ConditionalBlock(expressions, contents) {
   this.expressions = expressions;
