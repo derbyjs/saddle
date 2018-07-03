@@ -575,11 +575,11 @@ function testBindingUpdates(render) {
       dynamicTemplate: new saddle.DynamicText(new expressions.Expression('text'))
     , text: 'Yo'
     };
-    var binding = render(template, data).pop();
+    var textBinding = render(template, data).shift();
     expect(getText(fixture)).equal('Yo');
     data.text = 'Hola';
-    binding.context = getContext(data);
-    binding.update();
+    textBinding.context = getContext(data);
+    textBinding.update();
     expect(getText(fixture)).equal('Hola');
   });
 
