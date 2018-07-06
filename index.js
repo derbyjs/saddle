@@ -8,28 +8,37 @@ if (typeof require === 'function') {
 // https://github.com/jquery/jquery/blob/1.x-master/src/attributes/prop.js
 // https://github.com/jquery/jquery/blob/master/src/attributes/prop.js
 // http://webbugtrack.blogspot.com/2007/08/bug-242-setattribute-doesnt-always-work.html
-var UPDATE_PROPERTIES = {
+var BOOLEAN_PROPERTIES = {
   checked: 'checked'
 , disabled: 'disabled'
-, selected: 'selected'
-, type: 'type'
-, value: 'value'
-, 'class': 'className'
-, 'for': 'htmlFor'
-, tabindex: 'tabIndex'
 , readonly: 'readOnly'
+, selected: 'selected'
+};
+var INTEGER_PROPERTIES = {
+  colspan: 'colSpan'
 , maxlength: 'maxLength'
-, cellspacing: 'cellSpacing'
-, cellpadding: 'cellPadding'
 , rowspan: 'rowSpan'
-, colspan: 'colSpan'
-, usemap: 'useMap'
-, frameborder: 'frameBorder'
+, tabindex: 'tabIndex'
+};
+var STRING_PROPERTIES = {
+  cellpadding: 'cellPadding'
+, cellspacing: 'cellSpacing'
+, 'class': 'className'
 , contenteditable: 'contentEditable'
 , enctype: 'encoding'
+, 'for': 'htmlFor'
+, frameborder: 'frameBorder'
 , id: 'id'
 , title: 'title'
+, type: 'type'
+, usemap: 'useMap'
+, value: 'value'
 };
+var UPDATE_PROPERTIES = {};
+mergeInto(BOOLEAN_PROPERTIES, UPDATE_PROPERTIES);
+mergeInto(INTEGER_PROPERTIES, UPDATE_PROPERTIES);
+mergeInto(STRING_PROPERTIES, UPDATE_PROPERTIES);
+
 // CREATE_PROPERTIES map HTML attribute names to an Element DOM property that
 // should be used for setting on Element rendering instead of setAttribute.
 // input.defaultChecked and input.defaultValue affect the attribute, so we want
@@ -67,6 +76,9 @@ var NAMESPACE_URIS = {
 };
 
 exports.CREATE_PROPERTIES = CREATE_PROPERTIES;
+exports.BOOLEAN_PROPERTIES = BOOLEAN_PROPERTIES;
+exports.INTEGER_PROPERTIES = INTEGER_PROPERTIES;
+exports.STRING_PROPERTIES = STRING_PROPERTIES;
 exports.UPDATE_PROPERTIES = UPDATE_PROPERTIES;
 exports.VOID_ELEMENTS = VOID_ELEMENTS;
 exports.NAMESPACE_URIS = NAMESPACE_URIS;
@@ -500,19 +512,20 @@ DynamicAttribute.prototype.getBound = function(context, element, name, elementNs
 DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
   var element = binding.element;
+  var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
+  if (propertyName) {
+    var propertyValue = (STRING_PROPERTIES[binding.name]) ?
+      this.stringify(value) : value;
+    if (element[propertyName] === propertyValue) return;
+    element[propertyName] = propertyValue;
+    return;
+  }
   if (value === false || value == null) {
     if (this.ns) {
       element.removeAttributeNS(this.ns, binding.name);
     } else {
       element.removeAttribute(binding.name);
     }
-    return;
-  }
-  var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
-  if (propertyName) {
-    if (propertyName === 'value') value = this.stringify(value);
-    if (element[propertyName] === value) return;
-    element[propertyName] = value;
     return;
   }
   if (value === true) value = binding.name;

@@ -692,7 +692,33 @@ function testBindingUpdates(render) {
     expect(node.className).equal('message');
   });
 
-  it('updates and removes "title" attribute', function() {
+  it('updates text input "value" property', function() {
+    var template = new saddle.Template([
+      new saddle.Element('input', {
+        'value': new saddle.DynamicAttribute(new expressions.Expression('text')),
+      })
+    ]);
+
+    var binding = render(template).pop();
+    var input = fixture.firstChild;
+
+    // Set initial value to string.
+    binding.context = getContext({text: 'Hi'});
+    binding.update();
+    expect(input.value).equal('Hi');
+
+    // Update using numeric value, check that title is the stringified number.
+    binding.context = getContext({text: 123});
+    binding.update();
+    expect(input.value).equal('123');
+
+    // Change value to undefined, make sure attribute is removed.
+    binding.context = getContext({});
+    binding.update();
+    expect(input.value).equal('');
+  });
+
+  it('updates "title" attribute', function() {
     var template = new saddle.Template([
       new saddle.Element('div', {
         'title': new saddle.DynamicAttribute(new expressions.Expression('divTooltip')),
@@ -705,18 +731,17 @@ function testBindingUpdates(render) {
     // Set initial value to string.
     binding.context = getContext({divTooltip: 'My tooltip'});
     binding.update();
-    expect(node.getAttribute('title')).equal('My tooltip');
+    expect(node.title).equal('My tooltip');
 
     // Update using numeric value, check that title is the stringified number.
     binding.context = getContext({divTooltip: 123});
     binding.update();
-    expect(node.getAttribute('title')).equal('123');
+    expect(node.title).equal('123');
 
     // Change value to undefined, make sure attribute is removed.
-    binding.context = getContext({divTooltip: undefined});
+    binding.context = getContext({});
     binding.update();
-    expect(node.hasAttribute('title')).equal(false);
-    expect(node.getAttribute('title')).equal(null);
+    expect(node.title).equal('');
   });
 
   it('updates a Block', function() {
