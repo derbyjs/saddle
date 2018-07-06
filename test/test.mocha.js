@@ -21,6 +21,7 @@ describe('Static rendering', function() {
 
   describe('Fragment', function() {
     testStaticRendering(function test(options) {
+      // getFragment calls appendTo, so these Fragment tests cover appendTo.
       var fragment = options.template.getFragment(context);
       options.fragment(fragment);
     });
@@ -116,6 +117,50 @@ function testStaticRendering(test) {
         expect(fragment.childNodes[0].tagName.toLowerCase()).equal('input');
         expect(fragment.childNodes[0].getAttribute('autofocus')).eql(null);
       }
+    });
+  });
+
+  describe('title attribute', function() {
+    it('renders string value', function() {
+      test({
+        template: new saddle.Element('div', {
+          title: new saddle.Attribute('My tooltip')
+        })
+      , html: '<div title="My tooltip"></div>'
+      , fragment: function(fragment) {
+          expect(fragment.childNodes.length).equal(1);
+          expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+          expect(fragment.childNodes[0].getAttribute('title')).eql('My tooltip');
+        }
+      });
+    });
+
+    it('renders numeric value as a string', function() {
+      test({
+        template: new saddle.Element('div', {
+          title: new saddle.Attribute(123)
+        })
+      , html: '<div title="123"></div>'
+      , fragment: function(fragment) {
+          expect(fragment.childNodes.length).equal(1);
+          expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+          expect(fragment.childNodes[0].getAttribute('title')).eql('123');
+        }
+      });
+    });
+
+    it('does not render undefined value', function() {
+      test({
+        template: new saddle.Element('div', {
+          title: new saddle.Attribute(undefined)
+        })
+      , html: '<div></div>'
+      , fragment: function(fragment) {
+          expect(fragment.childNodes.length).equal(1);
+          expect(fragment.childNodes[0].tagName.toLowerCase()).equal('div');
+          expect(fragment.childNodes[0].hasAttribute('title')).eql(false);
+        }
+      });
     });
   });
 
@@ -645,6 +690,33 @@ function testBindingUpdates(render) {
     expect(node.getAttribute('data-greeting')).eql(null);
     // Dynamic updates don't affect static attribute
     expect(node.className).equal('message');
+  });
+
+  it('updates and removes "title" attribute', function() {
+    var template = new saddle.Template([
+      new saddle.Element('div', {
+        'title': new saddle.DynamicAttribute(new expressions.Expression('divTooltip')),
+      })
+    ]);
+
+    var binding = render(template).pop();
+    var node = fixture.firstChild;
+
+    // Set initial value to string.
+    binding.context = getContext({divTooltip: 'My tooltip'});
+    binding.update();
+    expect(node.getAttribute('title')).equal('My tooltip');
+
+    // Update using numeric value, check that title is the stringified number.
+    binding.context = getContext({divTooltip: 123});
+    binding.update();
+    expect(node.getAttribute('title')).equal('123');
+
+    // Change value to undefined, make sure attribute is removed.
+    binding.context = getContext({divTooltip: undefined});
+    binding.update();
+    expect(node.hasAttribute('title')).equal(false);
+    expect(node.getAttribute('title')).equal(null);
   });
 
   it('updates a Block', function() {

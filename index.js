@@ -500,19 +500,19 @@ DynamicAttribute.prototype.getBound = function(context, element, name, elementNs
 DynamicAttribute.prototype.update = function(context, binding) {
   var value = getUnescapedValue(this.expression, context);
   var element = binding.element;
-  var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
-  if (propertyName) {
-    if (propertyName === 'value') value = this.stringify(value);
-    if (element[propertyName] === value) return;
-    element[propertyName] = value;
-    return;
-  }
   if (value === false || value == null) {
     if (this.ns) {
       element.removeAttributeNS(this.ns, binding.name);
     } else {
       element.removeAttribute(binding.name);
     }
+    return;
+  }
+  var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
+  if (propertyName) {
+    if (propertyName === 'value') value = this.stringify(value);
+    if (element[propertyName] === value) return;
+    element[propertyName] = value;
     return;
   }
   if (value === true) value = binding.name;
