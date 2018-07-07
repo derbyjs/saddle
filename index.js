@@ -264,6 +264,7 @@ DynamicText.prototype.update = function(context, binding) {
   var value = this.expression.get(context);
   if (value instanceof Template) {
     var start = binding.node;
+    if (!start.parentNode) return;
     var end = start;
     var fragment = this.getFragment(context);
     replaceRange(context, start, end, fragment, binding);
