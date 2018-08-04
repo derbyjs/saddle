@@ -137,6 +137,9 @@ Template.prototype.update = function() {};
 Template.prototype.stringify = function(value) {
   return (value == null) ? '' : value + '';
 };
+Template.prototype.equals = function(other) {
+  return this === other;
+};
 Template.prototype.module = 'templates';
 Template.prototype.type = 'Template';
 Template.prototype.serialize = function() {
@@ -1224,7 +1227,7 @@ function equalConditions(a, b) {
   if (a === b) return true;
   // Failing that, allow for condition objects to define a custom `equals()`
   // method to indicate equivalence
-  return (a && (typeof a.equals === 'function') && a.equals(b)) ? true : false;
+  return (a instanceof Template) && a.equals(b);
 }
 
 
