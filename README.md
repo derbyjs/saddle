@@ -1,5 +1,3 @@
-[![browser support](https://ci.testling.com/derbyjs/saddle.png)](https://ci.testling.com/derbyjs/saddle)
-
 # Saddle
 
 Saddle contains the various `Template` and `Binding` classes for [DerbyJS](https://github.com/derbyjs/derby).
