@@ -1225,8 +1225,8 @@ function escapeAttribute(string) {
 function equalConditions(a, b) {
   // First, test for strict equality
   if (a === b) return true;
-  // Failing that, allow for condition objects to define a custom `equals()`
-  // method to indicate equivalence
+  // Failing that, allow for template objects used as a condition to define a
+  // custom `equals()` method to indicate equivalence
   return (a instanceof Template) && a.equals(b);
 }
 
