@@ -137,6 +137,9 @@ Template.prototype.update = function() {};
 Template.prototype.stringify = function(value) {
   return (value == null) ? '' : value + '';
 };
+Template.prototype.equals = function(other) {
+  return this === other;
+};
 Template.prototype.module = 'templates';
 Template.prototype.type = 'Template';
 Template.prototype.serialize = function() {
@@ -752,7 +755,8 @@ Block.prototype.serialize = function() {
 Block.prototype.update = function(context, binding) {
   if (!binding.start.parentNode) return;
   var condition = this.getCondition(context);
-  if (condition === binding.condition) return;
+  // Cancel update if prior condition is equivalent to current value
+  if (equalConditions(condition, binding.condition)) return;
   binding.condition = condition;
   // Get start and end in advance, since binding is mutated in getFragment
   var start = binding.start;
@@ -824,7 +828,8 @@ ConditionalBlock.prototype.serialize = function() {
 ConditionalBlock.prototype.update = function(context, binding) {
   if (!binding.start.parentNode) return;
   var condition = this.getCondition(context);
-  if (condition === binding.condition) return;
+  // Cancel update if prior condition is equivalent to current value
+  if (equalConditions(condition, binding.condition)) return;
   binding.condition = condition;
   // Get start and end in advance, since binding is mutated in getFragment
   var start = binding.start;
@@ -1215,6 +1220,14 @@ function escapeAttribute(string) {
   return string.replace(/[&"]/g, function(match) {
     return (match === '&') ? '&amp;' : '&quot;';
   });
+}
+
+function equalConditions(a, b) {
+  // First, test for strict equality
+  if (a === b) return true;
+  // Failing that, allow for template objects used as a condition to define a
+  // custom `equals()` method to indicate equivalence
+  return (a instanceof Template) && a.equals(b);
 }
 
 
