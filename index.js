@@ -1083,11 +1083,12 @@ function replaceRange(context, start, end, fragment, binding, innerOnly) {
 }
 function emitRemoved(context, node, ignore) {
   context.removeNode(node);
-  emitRemovedBinding(context, ignore, node.$bindNode);
-  emitRemovedBinding(context, ignore, node.$bindStart);
-  emitRemovedBinding(context, ignore, node.$bindItemStart);
+  emitRemovedBinding(context, ignore, node, '$bindNode');
+  emitRemovedBinding(context, ignore, node, '$bindStart');
+  emitRemovedBinding(context, ignore, node, '$bindItemStart');
   var attributes = node.$bindAttributes;
   if (attributes) {
+    node.$bindAttributes = null;
     for (var key in attributes) {
       context.removeBinding(attributes[key]);
     }
@@ -1096,9 +1097,13 @@ function emitRemoved(context, node, ignore) {
     emitRemoved(context, node, ignore);
   }
 }
-function emitRemovedBinding(context, ignore, binding) {
-  if (binding && binding !== ignore) {
-    context.removeBinding(binding);
+function emitRemovedBinding(context, ignore, node, property) {
+  var binding = node[property];
+  if (binding) {
+    node[property] = null;
+    if (binding !== ignore) {
+      context.removeBinding(binding);
+    }
   }
 }
 
