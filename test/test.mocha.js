@@ -1,8 +1,7 @@
-if ((typeof require) === 'function') {
-  var expect = require('expect.js');
-  var saddle = require('../index');
-  var expressions = require('../example/expressions');
-}
+var chai = require('chai');
+var expect = chai.expect;
+var saddle = require('../index');
+var expressions = require('../example/expressions');
 
 //add fixture to page
 //only 90s kids will remember this
@@ -493,7 +492,7 @@ describe('attachTo', function() {
     ]);
     expect(function() {
       renderAndAttach(template);
-    }).to.throwException();
+    }).throw(Error);
   });
 
 });
