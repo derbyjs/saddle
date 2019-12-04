@@ -115,6 +115,12 @@ Context.prototype.flush = function() {
 Context.prototype.queue = function(cb) {
   this.meta.pending.push(cb);
 };
+Context.prototype.getIterator = function() {
+  return this.meta.iterator;
+};
+Context.prototype.setIterator = function(iterator) {
+  this.meta.iterator = iterator;
+};
 
 function noop() {}
 function ContextMeta() {
@@ -123,4 +129,5 @@ function ContextMeta() {
   this.removeNode = noop;
   this.pauseCount = 0;
   this.pending = [];
+  this.iterator = null;
 };
