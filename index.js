@@ -518,6 +518,19 @@ DynamicAttribute.prototype.update = function(context, binding) {
   var element = binding.element;
   var propertyName = !this.elementNs && UPDATE_PROPERTIES[binding.name];
   if (propertyName) {
+    // Update via DOM property, short-circuiting if no update is needed.
+    // Certain properties must be strings, so for those properties, the value gets stringified.
+    //
+    // There is one special case, when updating the string `input.value` property with a number.
+    // If a user tries to type "1.01" in an `<input type="number">, then once they've typed "1.0",
+    // the context value is set to `1`, triggering this update function to set the input value to
+    // "1". That means typing "1.01" would be impossible without special handling to avoid
+    // overwriting an existing input value of "1.0" with a new value of "1".
+    if (element.tagName === 'INPUT' && propertyName === 'value' && typeof value === 'number') {
+      if (parseFloat(element.value) === value) {
+        return;
+      }
+    }
     var propertyValue = (STRING_PROPERTIES[binding.name]) ?
       this.stringify(value) : value;
     if (element[propertyName] === propertyValue) return;

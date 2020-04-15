@@ -717,6 +717,25 @@ function testBindingUpdates(render) {
     expect(input.value).equal('');
   });
 
+  it('does not clobber input type="number" value when typing "1.0"', function() {
+    var template = new saddle.Template([
+      new saddle.Element('input', {
+        'type': new saddle.Attribute('number'),
+        'value': new saddle.DynamicAttribute(new expressions.Expression('amount')),
+      })
+    ]);
+
+    var binding = render(template).pop();
+    var input = fixture.firstChild;
+
+    // Make sure that a user-typed input value of "1.0" does not get clobbered by
+    // a context value of `1`.
+    input.value = '1.0';
+    binding.context = getContext({amount: 1});
+    binding.update();
+    expect(input.value).equal('1.0');
+  });
+
   it('updates "title" attribute', function() {
     var template = new saddle.Template([
       new saddle.Element('div', {
