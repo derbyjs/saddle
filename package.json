@@ -6,7 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/derbyjs/saddle.git"
   },
-  "version": "0.9.5",
+  "version": "0.9.6",
   "main": "./lib/index.js",
   "scripts": {
     "test": "mocha test/serialize.mocha.js --bail --colors --reporter spec; node test/testServer.js"
