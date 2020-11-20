@@ -11,6 +11,7 @@ if (typeof require === 'function') {
 var BOOLEAN_PROPERTIES = {
   checked: 'checked'
 , disabled: 'disabled'
+, indeterminate: 'indeterminate'
 , readonly: 'readOnly'
 , selected: 'selected'
 };

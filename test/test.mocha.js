@@ -317,6 +317,19 @@ function testStaticRendering(test) {
     });
   });
 
+  it('renders <input> indeterminate attribute: true', function() {
+    test({
+      template: new saddle.Element('input', {
+        type: new saddle.Attribute('checkbox')
+      , indeterminate: new saddle.Attribute(true)
+      })
+    , html: '<input type="checkbox" indeterminate>'
+    , fragment: function(fragment) {
+        expect(fragment.childNodes[0].indeterminate).equal(true);
+      }
+    });
+  });
+
   it('renders <input> checked attribute: false', function() {
     test({
       template: new saddle.Element('input', {
