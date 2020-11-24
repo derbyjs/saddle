@@ -425,25 +425,35 @@ DynamicHtml.prototype.get = function(context) {
   return this.stringify(value);
 };
 DynamicHtml.prototype.appendTo = function(parent, context, binding) {
-  var start = document.createComment(this.expression);
-  var end = document.createComment(this.ending);
+  var bound = this.expression.meta.bindType !== 'unbound';
+  if (bound) {
+    var start = document.createComment(this.expression);
+    var end = document.createComment(this.ending);
+  }
   var value = getUnescapedValue(this.expression, context);
   var html = this.stringify(value);
   var fragment = createHtmlFragment(parent, html);
-  parent.appendChild(start);
+  if (bound) parent.appendChild(start);
   parent.appendChild(fragment);
-  parent.appendChild(end);
-  updateRange(context, binding, this, start, end);
+  if (bound) {
+    parent.appendChild(end);
+    updateRange(context, binding, this, start, end);
+  }
 };
 DynamicHtml.prototype.attachTo = function(parent, node, context) {
-  var start = document.createComment(this.expression);
-  var end = document.createComment(this.ending);
+  var bound = this.expression.meta.bindType !== 'unbound';
+  if (bound) {
+    var start = document.createComment(this.expression);
+    var end = document.createComment(this.ending);
+  }
   var value = getUnescapedValue(this.expression, context);
   var html = this.stringify(value);
-  parent.insertBefore(start, node || null);
+  if (bound) parent.insertBefore(start, node || null);
   node = attachHtml(parent, node, html);
-  parent.insertBefore(end, node || null);
-  updateRange(context, null, this, start, end);
+  if (bound) {
+    parent.insertBefore(end, node || null);
+    updateRange(context, null, this, start, end);
+  }
   return node;
 };
 DynamicHtml.prototype.update = function(context, binding) {
