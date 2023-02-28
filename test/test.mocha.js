@@ -1,4 +1,5 @@
 var chai = require('chai');
+chai.use(require('chai-as-promised'));
 var expect = chai.expect;
 var saddle = require('../index');
 var expressions = require('../example/expressions');
@@ -6,6 +7,409 @@ var expressions = require('../example/expressions');
 //add fixture to page
 //only 90s kids will remember this
 document.write('<div id="fixture"></div>');
+
+describe('Promises', function() {
+  it('returns a promise from get()', function(done) {
+    var template = new saddle.Template([
+      new expressions.Expression('foo'),
+    ]);
+    var context = getContext({foo: Promise.resolve('Foo')});
+    var promise = template.get(context);
+    expect(promise).eventually.equal('Foo').notify(done);
+  });
+
+  it('rejects a promise when value promise resolves undefined', function(done) {
+    var template = new saddle.Template([
+      new expressions.Expression('foo'),
+    ]);
+    var context = getContext({foo: Promise.resolve()});
+    var promise = template.get(context);
+    expect(promise).rejectedWith(Error).notify(done);
+  });
+
+  it('rejects a promise when value promise resolves a non-string', function(done) {
+    var template = new saddle.Template([
+      new expressions.Expression('foo'),
+    ]);
+    var context = getContext({foo: Promise.resolve(4)});
+    var promise = template.get(context);
+    expect(promise).rejectedWith(Error).notify(done);
+  });
+
+  it('resolves a promise nested in an element', function(done) {
+    var template = new saddle.Element('div', null, [
+      new expressions.Expression('foo'),
+      new saddle.Element('span')
+    ]);
+    var fooPromise = new Promise(function(resolve) {
+      setTimeout(function() {
+        resolve('Foo');
+      }, 10);
+    });
+    var context = getContext({foo: fooPromise});
+    var promise = template.get(context);
+    expect(promise).eventually.equal('<div>Foo<span></span></div>').notify(done);
+  });
+
+  it('resolves multiple parallel promises', function(done) {
+    var template = new saddle.Element('div', null, [
+      new saddle.Element('span', null, [
+        new expressions.Expression('foo'),
+      ]),
+      new saddle.Element('span', null, [
+        new expressions.Expression('bar'),
+      ])
+    ]);
+    var fooPromise = new Promise(function(resolve) {
+      setTimeout(function() {
+        resolve('Foo');
+      }, 10);
+    });
+    var barPromise = new Promise(function(resolve) {
+      setTimeout(function() {
+        resolve('Bar');
+      }, 5);
+    });
+    var context = getContext({foo: fooPromise, bar: barPromise});
+    var promise = template.get(context);
+    expect(promise).eventually.equal('<div><span>Foo</span><span>Bar</span></div>').notify(done);
+  });
+
+  it('resolves chained promises', function(done) {
+    var template = new saddle.Element('div', null, [
+      new saddle.Element('span', null, [
+        new expressions.Expression('foo'),
+      ])
+    ]);
+    var fooPromise = new Promise(function(resolve) {
+      setTimeout(function() {
+        var barPromise = new Promise(function(resolve) {
+          setTimeout(function() {
+            resolve('Bar');
+          }, 5);
+        });
+        resolve(barPromise);
+      }, 10);
+    });
+    var context = getContext({foo: fooPromise});
+    var promise = template.get(context);
+    expect(promise).eventually.equal('<div><span>Bar</span></div>').notify(done);
+  });
+});
+
+describe('getHtmlIterator', function() {
+  it('supports iterator without a yield', function() {
+    var template = new saddle.Element('div', null, [
+      new saddle.Element('span'),
+      new saddle.Element('span')
+    ]);
+    var context = getContext();
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator).instanceOf(saddle.Iterator);
+    expect(iterator.next()).eql({value: '<div><span></span><span></span></div>', done: false});
+    expect(iterator.next()).eql({value: undefined, done: true});
+  });
+
+  it('yields in template content', function() {
+    var template = new saddle.Template([
+      new saddle.Text('Hello, '),
+      new saddle.Yield(),
+      new saddle.Text('world.')
+    ]);
+    var context = getContext();
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator).instanceOf(saddle.Iterator);
+    expect(iterator.next()).eql({value: 'Hello, ', done: false});
+    expect(iterator.next()).eql({value: 'world.', done: false});
+    expect(iterator.next()).eql({value: undefined, done: true});
+  });
+
+  it('does not yield on template.get()', function() {
+    var template = new saddle.Template([
+      new saddle.Text('Hello, '),
+      new saddle.Yield(),
+      new saddle.Text('world.')
+    ]);
+    var context = getContext();
+    expect(template.get(context)).equal('Hello, world.');
+  });
+
+  it('produces empty string for a blank template', function() {
+    var template = new saddle.Template([]);
+    var context = getContext();
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator.next()).eql({value: '', done: false});
+    expect(iterator.next()).eql({value: undefined, done: true});
+  });
+
+  it('produces empty string for yield by itself', function() {
+    var template = new saddle.Template([
+      new saddle.Yield()
+    ]);
+    var context = getContext();
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator.next()).eql({value: '', done: false});
+    expect(iterator.next()).eql({value: '', done: false});
+    expect(iterator.next()).eql({value: undefined, done: true});
+  });
+
+  it('yields within nested elements', function() {
+    var template = new saddle.Element('div', null, [
+      new saddle.Element('span', null, [
+        new saddle.Yield(),
+        new saddle.Text('Hi')
+      ]),
+      new saddle.Element('span'),
+    ]);
+    var context = getContext();
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator.next()).eql({value: '<div><span>', done: false});
+    expect(iterator.next()).eql({value: 'Hi</span><span></span></div>', done: false});
+    expect(iterator.next()).eql({value: undefined, done: true});
+  });
+
+  it('adds a step per yield', function() {
+    var template = new saddle.Template([
+      new saddle.Element('div', null, [
+        new saddle.Yield(),
+        new saddle.Element('span'),
+        new saddle.Yield(),
+        new saddle.Element('span'),
+        new saddle.Yield()
+      ]),
+      new saddle.Yield(),
+      new saddle.Element('script')
+    ]);
+    var context = getContext();
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator.next()).eql({value: '<div>', done: false});
+    expect(iterator.next()).eql({value: '<span></span>', done: false});
+    expect(iterator.next()).eql({value: '<span></span>', done: false});
+    expect(iterator.next()).eql({value: '</div>', done: false});
+    expect(iterator.next()).eql({value: '<script></script>', done: false});
+    expect(iterator.next()).eql({value: undefined, done: true});
+  });
+
+  it('returns a promise', function(done) {
+    var template = new saddle.Template([
+      new expressions.Expression('foo'),
+    ]);
+    var context = getContext({foo: Promise.resolve('Foo')});
+    var iterator = template.getHtmlIterator(context);
+    var result = iterator.next();
+    expect(result.value).a('promise');
+    expect(result.done).equal(false);
+    expect(iterator.next()).eql({value: undefined, done: true});
+    expect(result.value).eventually.equal('Foo').notify(done);
+  });
+
+  it('returns a promise following yield', function(done) {
+    var template = new saddle.Template([
+      new saddle.Text('Hello, '),
+      new saddle.Yield(),
+      new expressions.Expression('foo'),
+      new saddle.Text('.')
+    ]);
+    var context = getContext({foo: Promise.resolve('Foo')});
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator.next()).eql({value: 'Hello, ', done: false});
+    var result = iterator.next();
+    expect(result.value).a('promise');
+    expect(result.done).equal(false);
+    expect(iterator.next()).eql({value: undefined, done: true});
+    expect(result.value).eventually.equal('Foo.').notify(done);
+  });
+
+  it('returns a promise following yield in element', function(done) {
+    var template = new saddle.Template([
+      new saddle.Text('Hello, '),
+      new saddle.Element('b', null, [
+        new saddle.Yield(),
+        new expressions.Expression('foo'),
+        new saddle.Text('.')
+      ])
+    ]);
+    var context = getContext({foo: Promise.resolve('Foo')});
+    var iterator = template.getHtmlIterator(context);
+    expect(iterator.next()).eql({value: 'Hello, <b>', done: false});
+    var result = iterator.next();
+    expect(result.value).a('promise');
+    expect(result.done).equal(false);
+    expect(iterator.next()).eql({value: undefined, done: true});
+    expect(result.value).eventually.equal('Foo.</b>').notify(done);
+  });
+
+  it('returns a promise preceding yield', function(done) {
+    var template = new saddle.Template([
+      new saddle.Text('Hello, '),
+      new expressions.Expression('foo'),
+      new saddle.Yield(),
+      new saddle.Text('.')
+    ]);
+    var context = getContext({foo: Promise.resolve('Foo')});
+    var iterator = template.getHtmlIterator(context);
+    var result = iterator.next();
+    expect(result.value).a('promise');
+    expect(result.done).equal(false);
+    result.value.then(function(html) {
+      expect(html).equal('Hello, Foo');
+      expect(iterator.next()).eql({value: '.', done: false});
+      expect(iterator.next()).eql({value: undefined, done: true});
+      done();
+    });
+  });
+
+  it('returns a promise preceding yield in element', function(done) {
+    var template = new saddle.Template([
+      new saddle.Text('Hello, '),
+      new saddle.Element('b', null, [
+        new expressions.Expression('foo'),
+        new saddle.Yield(),
+        new saddle.Text('.')
+      ])
+    ]);
+    var context = getContext({foo: Promise.resolve('Foo')});
+    var iterator = template.getHtmlIterator(context);
+    var result = iterator.next();
+    expect(result.value).a('promise');
+    expect(result.done).equal(false);
+    result.value.then(function(html) {
+      expect(html).equal('Hello, <b>Foo');
+      expect(iterator.next()).eql({value: '.</b>', done: false});
+      expect(iterator.next()).eql({value: undefined, done: true});
+      done();
+    });
+  });
+
+  it('iterates over complex example', function(done) {
+    var template = new saddle.Element('div', null, [
+      new saddle.Element('a', null, [
+        new saddle.Yield(),
+      ]),
+      new saddle.Element('b', null, [
+        new saddle.Yield(),
+        new expressions.Expression('foo'),
+        new expressions.Expression('bar')
+      ]),
+      new saddle.Element('c', null, [
+        new expressions.Expression('baz'),
+        new saddle.Yield(),
+      ]),
+      new saddle.Element('d', null, [
+        new expressions.Expression('bat'),
+        new saddle.Text(' world')
+      ])
+    ]);
+    var context = getContext({
+      foo: Promise.resolve('Foo'),
+      bar: Promise.resolve('Bar'),
+      baz: Promise.resolve('Baz'),
+      bat: Promise.resolve('Bat')
+    });
+    var iterator = template.getHtmlIterator(context);
+    var expected = [
+      '<div><a>',
+      '</a><b>',
+      'FooBar</b><c>Baz',
+      '</c><d>Bat world</d></div>'
+    ];
+    function testNext() {
+      var result = iterator.next();
+      if (result.done) {
+        expect(expected).eql([]);
+        return done();
+      }
+      Promise.resolve(result.value).then(function(resolved) {
+        expect(resolved).equal(expected.shift());
+        testNext();
+      }, done);
+    }
+    testNext();
+  });
+});
+
+describe('getHtmlIterable', function() {
+  if (typeof Symbol === 'undefined') return;
+
+  it('supports iterable without a yield', function() {
+    var template = new saddle.Element('div', null, [
+      new saddle.Element('span'),
+      new saddle.Element('span')
+    ]);
+    var context = getContext();
+    var iterable = template.getHtmlIterable(context);
+    // Test if this is an iterable
+    expect(iterable[Symbol.iterator]).a('function');
+    // Test the values produced by the iterable
+    expect(Array.from(iterable)).eql([
+      '<div><span></span><span></span></div>'
+    ]);
+  });
+
+  it('yields in template content', function() {
+    var template = new saddle.Template([
+      new saddle.Text('Hello, '),
+      new saddle.Yield(),
+      new saddle.Text('world.')
+    ]);
+    var context = getContext();
+    var iterable = template.getHtmlIterable(context);
+    expect(Array.from(iterable)).eql(['Hello, ', 'world.']);
+  });
+
+  it('can be iterated over with async await loop', function(done) {
+    var template = new saddle.Element('div', null, [
+      new saddle.Element('a', null, [
+        new saddle.Yield(),
+      ]),
+      new saddle.Element('b', null, [
+        new saddle.Yield(),
+        new expressions.Expression('foo'),
+        new expressions.Expression('bar')
+      ]),
+      new saddle.Element('c', null, [
+        new expressions.Expression('baz'),
+        new saddle.Yield(),
+      ]),
+      new saddle.Element('d', null, [
+        new expressions.Expression('bat'),
+        new saddle.Text(' world')
+      ])
+    ]);
+    var context = getContext({
+      foo: new Promise(function(resolve) {
+        setTimeout(function() {
+          resolve('Foo');
+        }, 5);
+      }),
+      bar: new Promise(function(resolve) {
+        setTimeout(function() {
+          resolve('Bar');
+        }, 10);
+      }),
+      baz: Promise.resolve('Baz'),
+      bat: Promise.resolve('Bat')
+    });
+    var iterable = template.getHtmlIterable(context);
+    var expected = [
+      '<div><a>',
+      '</a><b>',
+      'FooBar</b><c>Baz',
+      '</c><d>Bat world</d></div>'
+    ];
+    (async function() {
+      try {
+        for await (const value of iterable) {
+          expect(value).equal(expected.shift());
+        }
+        expect(expected).eql([]);
+        done();
+      } catch (err) {
+        done(err);
+      }
+    })();
+  });
+});
 
 describe('Static rendering', function() {
 

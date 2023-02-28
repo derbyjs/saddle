@@ -99,6 +99,9 @@ exports.Block = Block;
 exports.ConditionalBlock = ConditionalBlock;
 exports.EachBlock = EachBlock;
 
+exports.Iterable = Iterable;
+exports.Iterator = Iterator;
+exports.Yield = Yield;
 exports.Attribute = Attribute;
 exports.DynamicAttribute = DynamicAttribute;
 
@@ -114,6 +117,20 @@ function Template(content, source) {
 }
 Template.prototype.toString = function() {
   return this.source;
+};
+Template.prototype.getHtmlIterable = function(context, unescaped) {
+  var template = this;
+  return new Iterable(function() {
+    return template.getHtmlIterator(context, unescaped);
+  });
+};
+Template.prototype.getHtmlIterator = function(context, unescaped) {
+  var template = this;
+  var iterator = new Iterator(function() {
+    return template.get(context, unescaped);
+  });
+  context.setIterator(iterator);
+  return iterator;
 };
 Template.prototype.get = function(context, unescaped) {
   return contentHtml(this.content, context, unescaped);
@@ -145,6 +162,98 @@ Template.prototype.module = 'templates';
 Template.prototype.type = 'Template';
 Template.prototype.serialize = function() {
   return serializeObject.instance(this, this.content, this.source);
+};
+
+function Iterable(createIterator) {
+  this[Symbol.iterator] = createIterator;
+}
+function Iterator(callback) {
+  this._accumulator = '';
+  this._stack = [];
+  this.queue(callback);
+}
+Iterator.prototype.next = function() {
+  if (this._stack.length === 0) {
+    return {value: undefined, done: true};
+  }
+  var stack = this._stack;
+  this._stack = [];
+  var value = reduceStack('', stack);
+  return {value: value, done: false};
+};
+Iterator.prototype.prepend = function(accumulator) {
+  this._accumulator = accumulator + this._accumulator;
+};
+Iterator.prototype.queue = function(callback) {
+  this._stack.push(callback);
+};
+Iterator.prototype.flush = function() {
+  var accumulator = this._accumulator;
+  this._accumulator = '';
+  return accumulator;
+};
+function reduceStack(accumulator, stack) {
+  var callback;
+  while (callback = stack.shift()) {
+    var value = callback(accumulator);
+    if (typeof value === 'string') {
+      accumulator = value;
+      continue;
+    }
+    callback = function(resolved) {
+      if (resolved instanceof Iterator) {
+        resolved.queue(callback);
+        return resolved.flush();
+      }
+      // Sanity check type
+      if (typeof resolved !== 'string') {
+        throw new Error('expected string to be produced from template iterator step');
+      }
+      var result = reduceStack(resolved, stack);
+      return (result instanceof Iterator) ? result.flush() : result;
+    };
+    if (value instanceof Iterator) {
+      value.queue(callback);
+      return value.flush();
+    } else {
+      return Promise.resolve(value).then(callback);
+    }
+  }
+  return accumulator;
+}
+function createDelayedValue(accumulator, value, callback) {
+  // Sanity check type
+  if (typeof accumulator !== 'string') {
+    throw new Error('accumulator argument must be a string');
+  }
+  if (value instanceof Iterator) {
+    value.prepend(accumulator);
+    value.queue(callback);
+    return value;
+  }
+  return Promise.resolve(value).then(function(resolved) {
+    if (resolved instanceof Iterator) {
+      resolved.prepend(accumulator);
+      resolved.queue(callback);
+      return resolved;
+    }
+    // Sanity check type
+    if (typeof resolved !== 'string') {
+      throw new Error('expected resolved promise to produce a string');
+    }
+    return callback(accumulator + resolved);
+  });
+}
+
+function Yield() {}
+Yield.prototype = Object.create(Template.prototype);
+Yield.prototype.constructor = Yield;
+Yield.prototype.type = 'Yield';
+Yield.prototype.get = function(context) {
+  return context.getIterator() || '';
+}
+Yield.prototype.serialize = function() {
+  return serializeObject.instance(this);
 };
 
 
@@ -605,7 +714,12 @@ Element.prototype.get = function(context) {
   var startTag = '<' + tagItems.join(' ') + this.startClose;
   if (this.content) {
     var inner = contentHtml(this.content, context, this.unescapedContent);
-    return startTag + inner + endTag;
+    if (typeof inner === 'string') {
+      return startTag + inner + endTag;
+    }
+    return createDelayedValue(startTag, inner, function(resolved) {
+      return resolved + endTag;
+    });
   }
   return startTag + endTag;
 };
@@ -1057,12 +1171,21 @@ function attachContent(parent, node, content, context) {
   }
   return node;
 }
-function contentHtml(content, context, unescaped) {
-  var html = '';
-  for (var i = 0, len = content.length; i < len; i++) {
-    html += content[i].get(context, unescaped);
+function appendHtmlFrom(accumulator, i, content, context, unescaped) {
+  for (var len = content.length; i < len; i++) {
+    var value = content[i].get(context, unescaped);
+    if (typeof value === 'string') {
+      accumulator += value;
+      continue;
+    }
+    return createDelayedValue(accumulator, value, function(resolved) {
+      return appendHtmlFrom(resolved, i + 1, content, context, unescaped);
+    });
   }
-  return html;
+  return accumulator;
+}
+function contentHtml(content, context, unescaped) {
+  return appendHtmlFrom('', 0, content, context, unescaped);
 }
 function replaceRange(context, start, end, fragment, binding, innerOnly) {
   // Note: the calling function must make sure to check that there is a parent
